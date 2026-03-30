@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPEK Impedance Viewer</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/3/w3.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2/dist/pako.min.js"></script>
+    <script>
+        const charts = {
+            chart1: null,
+            chart2: null,
+            chart3: null,
+            chart4: null,
+            chart5: null,
+            chart6: null
+        };
+        const dirFiles = {
+            translatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/resultsMatrix_TX.json",
+            translatorischY: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/resultsMatrix_TY.json",
+            translatorischZ: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/resultsMatrix_TZ.json",
+            rotatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/resultsMatrix_RX.json",
+            rotatorischY: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/resultsMatrix_RY.json",
+            rotatorischZ: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/resultsMatrix_RZ.json"
+        };
+        const dimAnr = {
+            translatorischZ: 2,
+            translatorischY: 1,
+            translatorischX: 0,
+            rotatorischZ: 2,
+            rotatorischY: 1,
+            rotatorischX: 0
+        };
+                
+        let newResMat, mechImpe, newResMat_Mod, mechImpe_Mod;
+        let activeLine = 0;
+        let showSecondLegend = false;
+
+        let activeLine_Mod = 0;
+        let showSecondLegend_Mod = false;
+
+        let storedData = {
+            MI: [null,null],
+            Phase: [null,null],
+            VPA: [null,null],
+            MI_Mod: [null,null],
+            Phase_Mod: [null,null],
+            VPA_Mod: [null,null]
+        };
+        let m_beta, d_beta, k_beta;
+        let rangeFp, rangeFp_Mod;
+        let rangeFg, rangeFg_Mod;
+        let isLoading = false;
+
+        // Cache for frequency arrays
+        const frequencyCache = {};
+
+        // Debounce function
+        function debounce(func, delay) {
+            let timeoutId;
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func(...args), delay);
+            };
+        }
+    </script>
+</head>
+<body>
+    <div class="row">
+        <div class="column left">
+            <form action="/action_page.php">
+                <div class="w3-center">                                          
+                    <div class="w3-right-align"><p><label for="dataMAT">Data Set </label>
+                    <select id="dataMAT"></select></p></div>
+                    <div class="w3-right-align"><p><label for="anregung">Excitation Direction </label>
+                    <select id="anregung">
+                        <option value="translatorischZ">translational z</option>
+                        <option value="translatorischY">translational y</option>
+                        <option value="translatorischX">translational x</option>
+                        <option value="rotatorischZ">rotatory z</option>
+                        <option value="rotatorischY">rotatory y</option>
+                        <option value="rotatorischX">rotatory x</option>
+                    </select></p></div>
+                </div>
+            </form>
+            <div>
+                <img src="HAS_ISO10068_transparent.png" alt="Coordinate system for direction of excitation" style="width:70%">
+            </div>
+            <div class="ak-row">
+                <span>Push Force</span>
+                <input id="valAK" type="text">
+            </div>
+            <input id="andk" type="range" step="0.01" list="AKmarkers" />
+            <datalist id="AKmarkers"></datalist>
+            <div class="ak-row">
+                <span>Grip Force</span>
+                <input id="valGK" type="text">
+            </div>
+            <input id="greifk" type="range" step="0.01" list="GKmarkers" />
+            <datalist id="GKmarkers"></datalist>
+            <div class="flex-container">
+                <div>
+                    <p>Plot 2</p>
+                    <label class="switch">
+                        <input type="checkbox" id="compareData">
+                        <span class="slider round"></span>
+                    </label>
+                    <p>Plot 1</p>
+                </div>
+                <div class="images">
+                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
+                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
+                </div>
+            </div>
+            <br></br>
+            <p>Settings of four-degree-of-freedom mass spring damper system</p>
+            <div class="w3-center">                                          
+                <div class="w3-right-align"><p><label for="dataMAT_Mod">Data Set </label>
+                <select id="dataMAT_Mod"></select></p></div>
+                <div class="w3-right-align"><p><label for="anregung_Mod">Excitation Direction </label>
+                <select id="anregung_Mod">
+                    <option value="translatorischZ">translational z</option>
+                    <option value="translatorischY">translational y</option>
+                    <option value="translatorischX">translational x</option>
+                    <option value="rotatorischZ">rotatory z</option>
+                    <option value="rotatorischY">rotatory y</option>
+                    <option value="rotatorischX">rotatory x</option>
+                </select></p></div>
+            </div>
+            <br></br>
+            <div class="ak-row">
+                <span>Push Force</span>
+                <input id="valAK_Mod" type="text">
+            </div>
+            <input id="andk_Mod" type="range" step="0.01" list="AKmarkers_Mod" />
+            <datalist id="AKmarkers_Mod"></datalist>
+            <div class="ak-row">
+                <span>Grip Force</span>
+                <input id="valGK_Mod" type="text">
+            </div>
+            <input id="greifk_Mod" type="range" step="0.01" list="GKmarkers_Mod" />
+            <datalist id="GKmarkers_Mod"></datalist>
+            <div class="flex-container">
+                <div>
+                    <p>Plot 2</p>
+                    <label class="switch">
+                        <input type="checkbox" id="compareData_Mod">
+                        <span class="slider round"></span>
+                    </label>
+                    <p>Plot 1</p>
+                </div>
+                <div class="images">
+                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
+                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
+                </div>
+            </div>
+        </div>
+        <div class="vl"></div>
+        <div class="column middle">
+            <div class="chartContainer">
+                <canvas id="chartMI"></canvas>
+            </div>
+            <div class="chartContainer">
+                <canvas id="chartPhase"></canvas>
+            </div>
+            <script>
+                let dimSelected = dimAnr.translatorischZ;
+                let dimSelected_Mod = dimAnr.translatorischZ;
+
+                // DOM element caching
+                const sliderAK = document.getElementById("andk");
+                const inputAK = document.getElementById("valAK");
+                const sliderGK = document.getElementById("greifk");
+                const inputGK = document.getElementById("valGK");
+                const sliderAK_Mod = document.getElementById("andk_Mod");
+                const inputAK_Mod = document.getElementById("valAK_Mod");
+                const sliderGK_Mod = document.getElementById("greifk_Mod");
+                const inputGK_Mod = document.getElementById("valGK_Mod");
+
+                async function loadJson(url) {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    return response.json();
+                }
+
+                const MODEL_DEFS = {
+                    translatorischX: {
+                        betaFiles: {
+                            m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/m_beta_Matrix_TX.json",
+                            d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/d_beta_Matrix_TX.json",
+                            k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/k_beta_Matrix_TX.json"
+                        },
+                        buildX: ({ Fg, Fp, meta }) => ([
+                            1,
+                            Fg,
+                            Fp,
+                            Fg * Fp
+                        ])
+                    },
+                    default: {
+                        betaFiles: {
+                            m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/m_beta_Matrix_TZ.json",
+                            d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/d_beta_Matrix_TZ.json",
+                            k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@v1.0/data/k_beta_Matrix_TZ.json"
+                        },
+                        buildX: ({ Fg, Fp, meta }) => ([
+                            1,
+                            Fg,
+                            Fp,
+                            Fg * Fp,
+                            meta.maxFg,
+                            meta.maxFp,
+                            meta.gender
+                        ])
+                    }
+                };
+
+                async function loadModelMatrices() {
+                    const dirKey = document.getElementById("anregung_Mod").value;
+                    const def = MODEL_DEFS[dirKey] ?? MODEL_DEFS.default;
+
+                    const [m, d, k] = await Promise.all([
+                        loadJson(def.betaFiles.m),
+                        loadJson(def.betaFiles.d),
+                        loadJson(def.betaFiles.k)
+                    ]);
+
+                    m_beta = m;
+                    d_beta = d;
+                    k_beta = k;
+                }
+
+                function num(v, fallback = 0) {
+                    const n = Number(v);
+                    return Number.isFinite(n) ? n : fallback;
+                }
+
+                function extractSubjectMeta(resultsMatrix) {
+                    if (!resultsMatrix || resultsMatrix.length === 0) return null;
+
+                    const r = resultsMatrix[0];
+
+                    return {
+                        gender: num(r.gender, 1),
+                        maxFg: Math.max(...resultsMatrix.map(x => num(x.MaxGripForce)).filter(Number.isFinite)),
+                        maxFp: Math.max(...resultsMatrix.map(x => num(x.MaxPushForce)).filter(Number.isFinite)),
+                        handWeight: num(r.handWeight),
+                        bodyWeight: num(r.bodyWeight),
+                        bodyHeight: num(r.bodyHeight),
+                        FrontReach: num(r.FrontReach),
+                        ElbowToWristLength: num(r.ElbowToWristLength),
+                        thumbLength: num(r.thumbLength),
+                        handLength: num(r.handLength),
+                        palmLength: num(r.palmLength),
+                        palmWidth: num(r.palmWidth),
+                        forearmCircumference: num(r.forearmCircumference),
+                        armCircumference: num(r.armCircumference)
+                    };
+                }
+
+                async function loadDirection() {
+                    const key = document.getElementById("anregung").value;
+                    newResMat = await loadJson(dirFiles[key]);
+                    const key_Mod = document.getElementById("anregung_Mod").value;
+                    newResMat_Mod = await loadJson(dirFiles[key_Mod]);
+                }
+
+                function selectProband() {
+                    const chosenProb = Number(document.getElementById("dataMAT").value);
+                    mechImpe = newResMat.filter(r => r.SubjectNumber === chosenProb);
+                    const chosenProb_Mod = Number(document.getElementById("dataMAT_Mod").value);
+                    mechImpe_Mod = newResMat_Mod.filter(r => r.SubjectNumber === chosenProb_Mod);
+                }
+
+                function getScalar(v) {
+                    return Array.isArray(v) ? v[0] : v;
+                }
+
+                function populateProbandDropdown(resultsMatrix, selectId) {
+                    const select = document.getElementById(selectId);
+                    select.innerHTML = "";
+
+                    if (!resultsMatrix || resultsMatrix.length === 0) return;
+
+                    const subjects = [...new Set(
+                        resultsMatrix
+                            .map(r => r.SubjectNumber)
+                            .filter(v => Number.isFinite(v))
+                    )].sort((a, b) => a - b);
+
+                    subjects.forEach(subject => {
+                        const opt = document.createElement("option");
+                        opt.value = subject;
+                        opt.textContent = `Subject Number ${subject}`;
+                        select.appendChild(opt);
+                    });
+
+                    select.value = subjects[0];
+                }
+
+                function computeForceRanges() {
+                    rangeFp = [...new Set(
+                        mechImpe
+                            .filter(row => row?.TargetPushForce != null)
+                            .map(row => getScalar(row.TargetPushForce))
+                    )].sort((a, b) => a - b);
+
+                    rangeFp_Mod = [...new Set(
+                        mechImpe_Mod
+                            .filter(row => row?.TargetPushForce != null)
+                            .map(row => getScalar(row.TargetPushForce))
+                    )].sort((a, b) => a - b);
+
+                    rangeFg = [...new Set(
+                        mechImpe
+                            .filter(row => row?.TargetGripForce != null)
+                            .map(row => getScalar(row.TargetGripForce))
+                    )].sort((a, b) => a - b);
+
+                    rangeFg_Mod = [...new Set(
+                        mechImpe_Mod
+                            .filter(row => row?.TargetGripForce != null)
+                            .map(row => getScalar(row.TargetGripForce))
+                    )].sort((a, b) => a - b);
+
+                    setupSliders();
+                }
+
+                function setupSliders() {
+                    const numTicks = 6;
+
+                    // Setup Push Force sliders
+                    const minValFp = Math.min(...rangeFp);
+                    const maxValFp = Math.max(...rangeFp);
+                    const stepFp = (maxValFp - minValFp) / (numTicks - 1);
+                    const ticksFp = Array.from({ length: numTicks }, (_, i) =>
+                        Math.round(minValFp + i * stepFp)
+                    );
+
+                    const minValFp_Mod = Math.min(...rangeFp_Mod);
+                    const maxValFp_Mod = Math.max(...rangeFp_Mod);
+                    const stepFp_Mod = (maxValFp_Mod - minValFp_Mod) / (numTicks - 1);
+                    const ticksFp_Mod = Array.from({ length: numTicks }, (_, i) =>
+                        Math.round(minValFp_Mod + i * stepFp_Mod)
+                    );
+
+                    setupSlider(sliderAK, inputAK, minValFp, maxValFp, ticksFp, "AKmarkers");
+                    setupSlider(sliderAK_Mod, inputAK_Mod, minValFp_Mod, maxValFp_Mod, ticksFp_Mod, "AKmarkers_Mod");
+
+                    // Setup Grip Force sliders
+                    const minValFg = Math.min(...rangeFg);
+                    const maxValFg = Math.max(...rangeFg);
+                    const stepFg = (maxValFg - minValFg) / (numTicks - 1);
+                    const ticksFg = Array.from({ length: numTicks }, (_, i) =>
+                        Math.round(minValFg + i * stepFg)
+                    );
+
+                    const minValFg_Mod = Math.min(...rangeFg_Mod);
+                    const maxValFg_Mod = Math.max(...rangeFg_Mod);
+                    const stepFg_Mod = (maxValFg_Mod - minValFg_Mod) / (numTicks - 1);
+                    const ticksFg_Mod = Array.from({ length: numTicks }, (_, i) =>
+                        Math.round(minValFg_Mod + i * stepFg_Mod)
+                    );
+
+                    setupSlider(sliderGK, inputGK, minValFg, maxValFg, ticksFg, "GKmarkers");
+                    setupSlider(sliderGK_Mod, inputGK_Mod, minValFg_Mod, maxValFg_Mod, ticksFg_Mod, "GKmarkers_Mod");
+                }
+
+                function setupSlider(slider, input, min, max, ticks, datalistId) {
+                    slider.min = min;
+                    slider.max = max;
+                    slider.value = min;
+                    input.value = min;
+
+                    const datalist = document.getElementById(datalistId);
+                    datalist.innerHTML = "";
+                    ticks.forEach(v => {
+                        const opt = document.createElement("option");
+                        opt.value = v;
+                        opt.label = v.toString();
+                        datalist.appendChild(opt);
+                    });
+
+                    const minVal = Number(slider.min);
+                    const maxVal = Number(slider.max);
+
+                    const clamp = (v) => Math.min(maxVal, Math.max(minVal, v));
+
+                    slider.addEventListener("input", () => {
+                        input.value = slider.value;
+                    });
+
+                    input.addEventListener("keydown", e => {
+                        if (e.key !== "Enter") return;
+                        let v = Number(input.value);
+                        if (Number.isNaN(v)) return;
+                        v = clamp(v);
+                        slider.value = v;
+                        input.value = v;
+                        slider.dispatchEvent(new Event("input"));
+                    });
+
+                    input.addEventListener("blur", () => {
+                        let v = Number(input.value);
+                        if (Number.isNaN(v)) return;
+                        v = clamp(v);
+                        slider.value = v;
+                        input.value = v;
+                        slider.dispatchEvent(new Event("input"));
+                    });
+                }
+
+                async function initializeApp() {
+                    await loadDirection();
+                    populateProbandDropdown(newResMat, "dataMAT");
+                    populateProbandDropdown(newResMat_Mod, "dataMAT_Mod");
+                    selectProband();
+                    computeForceRanges();
+                    await loadModelMatrices();
+                    updateUI();
+                    updateAllCharts();
+                }
+
+                // Debounced chart update
+                const debouncedChartUpdate = debounce(updateAllCharts, 150);
+
+                document.addEventListener("DOMContentLoaded", () => {
+                    initializeApp();
+
+                    // Direction changes
+                    document.getElementById("anregung").addEventListener("change", async e => {
+                        isLoading = true;
+                        await loadDirection();
+                        populateProbandDropdown(newResMat, "dataMAT");
+                        selectProband();
+                        computeForceRanges();
+                        await loadModelMatrices();
+                        updateUI();
+                        isLoading = false;
+                        updateAllCharts();
+                    });
+
+                    document.getElementById("anregung_Mod").addEventListener("change", async e => {
+                        isLoading = true;
+                        await loadDirection();
+                        populateProbandDropdown(newResMat_Mod, "dataMAT_Mod");
+                        selectProband();
+                        computeForceRanges();
+                        await loadModelMatrices();
+                        updateUI();
+                        isLoading = false;
+                        updateAllCharts();
+                    });
+
+                    // Proband selection
+                    document.getElementById("dataMAT").addEventListener("change", async function () {
+                        if (!newResMat) return;
+                        isLoading = true;
+                        selectProband();
+                        computeForceRanges();
+                        updateUI();
+                        isLoading = false;
+                        updateAllCharts();
+                    });
+
+                    document.getElementById("dataMAT_Mod").addEventListener("change", async function () {
+                        if (!newResMat_Mod) return;
+                        isLoading = true;
+                        selectProband();
+                        computeForceRanges();
+                        updateUI();
+                        isLoading = false;
+                        updateAllCharts();
+                    });
+
+                    // Slider inputs with debouncing
+                    sliderAK.addEventListener("input", () => {
+                        updateUI();
+                        debouncedChartUpdate();
+                    });
+                    sliderGK.addEventListener("input", () => {
+                        updateUI();
+                        debouncedChartUpdate();
+                    });
+                    sliderAK_Mod.addEventListener("input", () => {
+                        updateUI();
+                        debouncedChartUpdate();
+                    });
+                    sliderGK_Mod.addEventListener("input", () => {
+                        updateUI();
+                        debouncedChartUpdate();
+                    });
+
+                    // Dimension selection
+                    document.getElementById("anregung").addEventListener("change", function () {
+                        dimSelected = dimAnr[this.value];
+                        updateAllCharts();
+                    });
+
+                    document.getElementById("anregung_Mod").addEventListener("change", function () {
+                        dimSelected_Mod = dimAnr[this.value];
+                        updateAllCharts();
+                    });
+
+                    // Compare toggles
+                    document.getElementById("compareData").addEventListener("change", e => {
+                        activeLine = e.target.checked ? 1 : 0;
+                        showSecondLegend = true;
+                        updateAllCharts();
+                    });
+
+                    document.getElementById("compareData_Mod").addEventListener("change", e => {
+                        activeLine_Mod = e.target.checked ? 1 : 0;
+                        showSecondLegend_Mod = true;
+                        updateAllCharts();
+                    });
+
+                    document.getElementById("dataMAT").dispatchEvent(new Event("change"));
+                    document.getElementById("dataMAT_Mod").dispatchEvent(new Event("change"));
+                });
+                
+                function updateAllCharts() {
+                    if (isLoading) return;
+
+                    charts.chart1 = createChart({
+                        canvasId: "chartMI",
+                        chartRef: charts.chart1,
+                        resultsMatrix: mechImpe,
+                        store: storedData.MI,
+                        AK: sliderAK.value,
+                        GK: sliderGK.value,
+                        minValue: "0",
+                        maxValue: "800",
+                        axisTitel: "|Z\u2095| in Ns/m",
+                        labelPrefix: "Z\u2095",
+                        titel: "Mechanical Impedance"
+                    });
+
+                    charts.chart2 = createChart({
+                        canvasId: "chartPhase",
+                        chartRef: charts.chart2,
+                        resultsMatrix: mechImpe,
+                        store: storedData.Phase,
+                        AK: sliderAK.value,
+                        GK: sliderGK.value,
+                        minValue: "-1.0",
+                        maxValue: "3.2",
+                        axisTitel: "\u2220Z\u2095 in rad",
+                        labelPrefix: "\u2220Z\u2095",
+                        titel: "Phase Angle"
+                    });
+
+                    charts.chart3 = createChart({
+                        canvasId: "chartVPA",
+                        chartRef: charts.chart3,
+                        resultsMatrix: mechImpe,
+                        store: storedData.VPA,
+                        AK: sliderAK.value,
+                        GK: sliderGK.value,
+                        minValue: "0.0",
+                        maxValue: "0.5",
+                        axisTitel: "VPA in W",
+                        labelPrefix: "VPA",
+                        titel: "Vibration Power Absorption"
+                    });
+
+                    charts.chart4 = createChart({
+                        canvasId: "chartMI_Mod",
+                        chartRef: charts.chart4,
+                        resultsMatrix: mechImpe_Mod,
+                        store: storedData.MI_Mod,
+                        AK: sliderAK_Mod.value,
+                        GK: sliderGK_Mod.value,
+                        minValue: "0",
+                        maxValue: "800",
+                        axisTitel: "|Z\u2095| in Ns/m",
+                        labelPrefix: "Z\u2095",
+                        titel: "Mechanical Impedance"
+                    });
+
+                    charts.chart5 = createChart({
+                        canvasId: "chartPhase_Mod",
+                        chartRef: charts.chart5,
+                        resultsMatrix: mechImpe_Mod,
+                        store: storedData.Phase_Mod,
+                        AK: sliderAK_Mod.value,
+                        GK: sliderGK_Mod.value,
+                        minValue: "-1.0",
+                        maxValue: "3.2",
+                        axisTitel: "\u2220Z\u2095 in rad",
+                        labelPrefix: "\u2220Z\u2095",
+                        titel: "Phase Angle"
+                    });
+                }
+
+                function getDataField(canvasId) {
+                    switch (canvasId) {
+                        case "chartMI":    return "MI";
+                        case "chartPhase": return "Phase";
+                        case "chartVPA":   return "VPA";
+                        case "chartMI_Mod":    return "MI";
+                        case "chartPhase_Mod": return "Phase"
+                        default:
+                            throw new Error("Unknown canvasId: " + canvasId);
+                    }
+                }
+
+                function shouldTakeAbs(canvasId) {
+                    return canvasId === "chartMI" || canvasId === "chartVPA";
+                }
+
+                function getMaxFreq(excitation) {
+                    if (excitation.startsWith("rotatorisch")) {
+                        return 100;
+                    }
+                    if (excitation === "translatorischY") {
+                        return 100;
+                    }
+                    return 500;
+                }
+
+                function buildFrequencyArray(maxFreq) {
+                    const cacheKey = `freq_${maxFreq}`;
+                    if (frequencyCache[cacheKey]) {
+                        return frequencyCache[cacheKey];
+                    }
+                    
+                    const freq = [];
+                    for (let f = 10; f <= maxFreq; f += 5) {
+                        freq.push(f);
+                    }
+                    frequencyCache[cacheKey] = freq;
+                    return freq;
+                }
+
+                function selectMat(resultsMatrix, initFp, initFg, canvasId) {
+                    if (!rangeFp || !rangeFg) { 
+                        return { x: [], y: [] };
+                    }
+
+                    const dataField = getDataField(canvasId);
+                    const x = [];
+                    const y = [];
+
+                    const excitation = document.getElementById("anregung").value;
+                    const maxFreq = getMaxFreq(excitation);
+                    const freq = buildFrequencyArray(maxFreq);
+
+                    for (let i = 0; i < freq.length; i++) {
+                        const valMI = [];
+                        const data_Fg_low_Fp_low = [];
+                        const data_Fg_low_Fp_high = [];
+                        const data_Fg_high_Fp_low = [];
+                        const data_Fg_high_Fp_high = [];
+                        let Fp_low, Fp_high, Fg_low, Fg_high;
+                        let distanceFp_low, distanceFg_low;
+                        
+                        for (let k = 0; k < resultsMatrix.length; k++) {
+                            const row = resultsMatrix[k];
+                            let value = row[dataField]?.[i]?.[dimSelected]?.[dimSelected];
+                            if (value == null) continue;
+
+                            if (shouldTakeAbs(canvasId)) {
+                                value = math.abs(value);
+                            }
+
+                            if (
+                                row.TargetPushForce == initFp &&
+                                row.TargetGripForce == initFg
+                            ) {
+                                valMI.push(value);
+                            } 
+                            
+                            if (!rangeFp.includes(Number(initFp)) || !rangeFg.includes(Number(initFg))) {
+                                Fp_low  = rangeFp.filter(v => v <= initFp).at(-1);
+                                Fp_high = rangeFp.find(v => v > initFp);
+
+                                Fg_low  = rangeFg.filter(v => v <= initFg).at(-1);
+                                Fg_high = rangeFg.find(v => v > initFg);
+
+                                if ([Fp_low, Fp_high, Fg_low, Fg_high].some(v => v == null)) {
+                                    continue;
+                                }
+                                distanceFp_low = (initFp-Fp_low) / (Fp_high - Fp_low);
+                                distanceFg_low = (initFg-Fg_low) / (Fg_high - Fg_low);
+                                
+                                if (row.TargetPushForce == Fp_low  && row.TargetGripForce == Fg_low)
+                                    data_Fg_low_Fp_low.push(value);
+
+                                if (row.TargetPushForce == Fp_high && row.TargetGripForce == Fg_low)
+                                    data_Fg_low_Fp_high.push(value);
+
+                                if (row.TargetPushForce == Fp_low  && row.TargetGripForce == Fg_high)
+                                    data_Fg_high_Fp_low.push(value);
+
+                                if (row.TargetPushForce == Fp_high && row.TargetGripForce == Fg_high)
+                                    data_Fg_high_Fp_high.push(value);
+                            }
+                        }
+                        if (valMI.length > 0) {
+                                y.push(math.mean(valMI));
+                                x.push(freq[i]);
+                        }
+                        if (data_Fg_low_Fp_low.length > 0 && data_Fg_low_Fp_high.length > 0 && data_Fg_high_Fp_low.length > 0 && data_Fg_high_Fp_high.length > 0) {
+                            const data_low_low_med = math.mean(math.abs(data_Fg_low_Fp_low));
+                            const data_low_high_med = math.mean(math.abs(data_Fg_low_Fp_high));
+                            const data_high_low_med = math.mean(math.abs(data_Fg_high_Fp_low));
+                            const data_high_high_med = math.mean(math.abs(data_Fg_high_Fp_high));
+
+                            const Mi_inter_Fg_Fphigh = data_low_high_med*(1-distanceFg_low) + data_high_high_med*distanceFg_low;
+                            const Mi_inter_Fg_Fplow = data_low_low_med*(1-distanceFg_low) + data_high_low_med*distanceFg_low;
+                            const Mi_inter = Mi_inter_Fg_Fplow*(1-distanceFp_low) + Mi_inter_Fg_Fphigh*distanceFp_low;
+                            y.push(Mi_inter);
+                            x.push(freq[i]);
+                        }
+                    }
+                    return { x, y };
+                }
+
+                function createChart({canvasId,chartRef,resultsMatrix,store,AK,GK,minValue,maxValue,axisTitel,labelPrefix,titel}) {
+
+                    if (!resultsMatrix) return chartRef;
+                    const initFp = AK;
+                    const initFg = GK;
+
+                    const liveData = canvasId.includes("_Mod")
+                        ? callModelData(resultsMatrix, initFp, initFg, canvasId)
+                        : selectMat(resultsMatrix, initFp, initFg, canvasId);
+
+                    store[activeLine] = {
+                        x: liveData.x,
+                        y: liveData.y,
+                        Fp: initFp,
+                        Fg: initFg
+                    };
+
+                    if (chartRef) {
+                        chartRef.data.labels = liveData.x;
+
+                        chartRef.data.datasets[0].data = store[0]?.y ?? [];
+                        chartRef.data.datasets[1].data = store[1]?.y ?? [];
+
+                        chartRef.data.datasets[0].label = store[0]
+                            ? `${labelPrefix} (Fp: ${store[0].Fp}; Fg: ${store[0].Fg})`
+                            : `${labelPrefix}`;
+                        
+                        chartRef.data.datasets[1].label = store[1]
+                            ? `${labelPrefix} (Fp: ${store[1].Fp}; Fg: ${store[1].Fg})`
+                            : `${labelPrefix}`;
+
+                        chartRef.data.datasets[0].hidden = false;
+                        chartRef.data.datasets[1].hidden = !showSecondLegend;
+
+                        chartRef.update("none");
+                        return chartRef;
+                    }
+
+                    const ctx = document.getElementById(canvasId);
+                    return new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: liveData.x,
+                                datasets: [{
+                                    label: `${labelPrefix} (Fp: ${initFp}; Fg: ${initFg})`,
+                                    data: store[0]?.y ?? [],
+                                    showLine: false,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6,
+                                    pointStyle: 'circle',
+                                    borderColor: 'rgba(0,0,255,0.8)',
+                                    backgroundColor: 'rgba(0,0,0,0)',
+                                    pointBorderColor: 'rgba(0,0,255,0.8)',
+                                    pointBackgroundColor: 'rgba(0,0,0,0)',
+                                    pointBorderWidth: 1
+                                },
+                                {
+                                    label: `${labelPrefix} (Fp: ${initFp}; Fg: ${initFg})`,
+                                    data: store[1]?.y ?? [],
+                                    hidden: true,
+                                    showLine: false,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6,
+                                    pointStyle: 'circle',
+                                    borderColor: '#E66A3C',
+                                    backgroundColor: 'rgba(0,0,0,0)',
+                                    pointBorderColor: '#E66A3C',
+                                    pointBackgroundColor: 'rgba(0,0,0,0)',
+                                    pointBorderWidth: 1
+                                }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'top', align: 'end', labels: { 
+                                        usePointStyle: true,
+                                        pointStyle: 'circle', boxWidth: 4, boxHeight: 5, padding: 12, font: { size: 12 },
+                                        filter: (legendItem, chart) => {
+                                            if (legendItem.datasetIndex === 1 && !showSecondLegend) {
+                                                return false;
+                                            }
+                                            return true;
+                                        }
+                                    }},
+                                    title: { display: true, text: titel, padding: { top: 20, bottom: 0 }, font: { size: 14 }},
+                                },
+                                scales: {
+                                    x: { title: { display: true, text: 'Frequency in Hz' }, min: 10, max: 500, type: 'logarithmic' },
+                                    y: { title: { display: true, text: axisTitel}, min: minValue, max: maxValue, ticks: {
+                                        callback: value => {
+                                            const v = Number(value);
+                                            return Number.isInteger(v) ? v : v.toFixed(2);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            </script>
+            <div class="chartContainer">
+                <canvas id="chartMI_Mod"></canvas>
+            </div>
+            <div class="imag-4mkd">
+                <img src="Viermassenschwinger.png" alt="Coordinate system for direction of excitation">
+            </div>
+            <script>
+                
+                function callModelData(resultsMatrix, Fp, Fg, canvasId){
+
+                    if (!rangeFp_Mod || !rangeFg_Mod) { 
+                        return { x: [], y: [] };
+                    }
+
+                    const dataField = getDataField(canvasId);
+                    const x = [];
+                    const y = [];
+
+                    const excitation_Mod = document.getElementById("anregung_Mod").value;
+                    const maxFreq = getMaxFreq(excitation_Mod);
+                    const freq = buildFrequencyArray(maxFreq);
+                    const w = freq.map(f => 2*Math.PI*f);
+
+                    const m_model = matlabModel(Fg, Fp, m_beta, resultsMatrix);
+                    const d_model = matlabModel(Fg, Fp, d_beta, resultsMatrix);
+                    const k_model = matlabModel(Fg, Fp, k_beta, resultsMatrix);
+
+                    const {Zmod} = impedance_mkd(
+                        m_model,
+                        d_model,
+                        k_model,
+                        w
+                    );
+
+                    const phase_mod = Zmod.map(z => Math.atan2(z.im, z.re));
+
+                    for (let f = 0; f < freq.length; f++) {
+                        if(dataField === "MI"){
+                            y.push(Zmod[f].re);
+                        }
+                        if(dataField === "Phase"){
+                            y.push(phase_mod[f]);
+                        }
+                        x.push(freq[f]);
+                    }
+                    return { x, y };
+                }
+
+                function impedance_mkd(m, d, k, w) {
+                    const n = m.length;
+
+                    const M = zeros(n, n);
+                    for (let i = 0; i < n; i++) M[i][i] = m[i];
+
+                    const C = zeros(n, n);
+                    const K = zeros(n, n);
+
+                    for (let i = 0; i < n; i++) {
+                        if (i > 0) {
+                            C[i][i - 1] = -d[i - 1];
+                            K[i][i - 1] = -k[i - 1];
+                        }
+                        if (i < n - 1) {
+                            C[i][i + 1] = -d[i];
+                            K[i][i + 1] = -k[i];
+                        }
+                        if (i === 0) {
+                            C[i][i] = d[0];
+                            K[i][i] = k[0];
+                        } else if (i === n - 1) {
+                            C[i][i] = d[n - 2] + d[n - 1];
+                            K[i][i] = k[n - 2] + k[n - 1];
+                        } else {
+                            C[i][i] = d[i - 1] + d[i];
+                            K[i][i] = k[i - 1] + k[i];
+                        }
+                    }
+
+                    const F = Array(n).fill(null).map(() => ({ re: 1, im: 0 }));
+                    F[0] = { re: 1, im: 0 };
+                    for (let i = 1; i < n; i++) F[i] = { re: 0, im: 0 };
+
+                    const nK = matrixNorm2(K);
+                    const nC = matrixNorm2(C);
+                    const nM = matrixNorm2(M);
+
+                    const tolRcond = 1e-12;
+                    const tau = 1e-8;
+
+                    const Zmod = [];
+                    const Ymod = [];
+
+                    for (let i = 0; i < w.length; i++) {
+                        const wi = w[i];
+
+                        let D = zeros(n, n).map((row, r) =>
+                            row.map((_, c) => ({
+                                re: K[r][c] - wi * wi * M[r][c],
+                                im: wi * C[r][c]
+                            }))
+                        );
+
+                        const rc = rcondComplex(D);
+                        if (rc < tolRcond) {
+                            const eps = tau * (nK + wi * nC + wi * wi * nM);
+                            for (let j = 0; j < n; j++) {
+                                D[j][j].re += eps;
+                            }
+                        }
+
+                        const q = solveComplex(D, F);
+
+                        const v1 = {
+                            re: -wi * q[0].im,
+                            im: wi * q[0].re
+                        };
+
+                        Ymod.push({ ...v1 });
+                        Zmod.push(complexDiv({ re: 1, im: 0 }, v1));
+                    }
+
+                    return { Zmod, Ymod };
+                }
+
+                function zeros(rows, cols) {
+                    return Array(rows).fill(null).map(() => Array(cols).fill(0));
+                }
+
+                function matrixNorm2(A) {
+                    let sum = 0;
+                    for (const row of A) {
+                        for (const val of row) {
+                            sum += val * val;
+                        }
+                    }
+                    return Math.sqrt(sum);
+                }
+
+                function rcondComplex(A) {
+                    const n = A.length;
+                    let maxDiag = 0;
+                    let minDiag = Infinity;
+                    for (let i = 0; i < n; i++) {
+                        const mag = Math.sqrt(A[i][i].re ** 2 + A[i][i].im ** 2);
+                        if (mag > maxDiag) maxDiag = mag;
+                        if (mag < minDiag) minDiag = mag;
+                    }
+                    return maxDiag === 0 ? 0 : minDiag / maxDiag;
+                }
+
+                function solveComplex(A, b) {
+                    const n = A.length;
+
+                    const M = A.map(row => row.map(c => ({ re: c.re, im: c.im })));
+                    const rhs = b.map(c => ({ re: c.re, im: c.im }));
+
+                    for (let col = 0; col < n; col++) {
+                        let maxMag = 0;
+                        let pivotRow = col;
+                        for (let row = col; row < n; row++) {
+                            const mag = M[row][col].re ** 2 + M[row][col].im ** 2;
+                            if (mag > maxMag) {
+                                maxMag = mag;
+                                pivotRow = row;
+                            }
+                        }
+
+                        [M[col], M[pivotRow]] = [M[pivotRow], M[col]];
+                        [rhs[col], rhs[pivotRow]] = [rhs[pivotRow], rhs[col]];
+
+                        const pivot = M[col][col];
+
+                        for (let row = col + 1; row < n; row++) {
+                            const factor = complexDiv(M[row][col], pivot);
+                            for (let j = col; j < n; j++) {
+                                M[row][j] = complexSub(M[row][j], complexMul(factor, M[col][j]));
+                            }
+                            rhs[row] = complexSub(rhs[row], complexMul(factor, rhs[col]));
+                        }
+                    }
+
+                    const x = Array(n).fill(null).map(() => ({ re: 0, im: 0 }));
+                    for (let i = n - 1; i >= 0; i--) {
+                        let sum = { re: rhs[i].re, im: rhs[i].im };
+                        for (let j = i + 1; j < n; j++) {
+                            sum = complexSub(sum, complexMul(M[i][j], x[j]));
+                        }
+                        x[i] = complexDiv(sum, M[i][i]);
+                    }
+
+                    return x;
+                }
+
+                function complexMul(a, b) {
+                    return {
+                        re: a.re * b.re - a.im * b.im,
+                        im: a.re * b.im + a.im * b.re
+                    };
+                }
+
+                function complexDiv(a, b) {
+                    const denom = b.re * b.re + b.im * b.im;
+                    return {
+                        re: (a.re * b.re + a.im * b.im) / denom,
+                        im: (a.im * b.re - a.re * b.im) / denom
+                    };
+                }
+
+                function complexSub(a, b) {
+                    return { re: a.re - b.re, im: a.im - b.im };
+                }
+
+            </script>
+        </div>
+        <div class="column right">
+            <div class="chartContainer">
+                <canvas id="chartVPA"></canvas>
+            </div>
+            <div class="param-proband">
+                <label for="gender">Sex: Male = 1, Female = 2</label><input id="gender" readonly>
+                <label for="handWeight">Hand Weight [g]:</label><input id="handWeight" readonly>
+                <label for="bodyWeight">Body Weight [kg]:</label><input id="bodyWeight" readonly>
+                <label for="bodyHeight">Body Height [mm]:</label><input id="bodyHeight" readonly>
+                <label for="FrontReach">Front Reach [mm]:</label><input id="FrontReach" readonly>
+                <label for="ElbowToWristLength">Elbow to Wrist Length [mm]:</label><input id="ElbowToWristLength" readonly>
+                <label for="thumbLength">Thumb Length [mm]:</label><input id="thumbLength" readonly>
+                <label for="handLength">Hand Length [mm]:</label><input id="handLength" readonly>
+                <label for="palmLength">Palm Length [mm]:</label><input id="palmLength" readonly>
+                <label for="palmWidth">Palm Width [mm]:</label><input id="palmWidth" readonly>
+                <label for="forearmCircumference">Forearm Circumference [mm]:</label><input id="forearmCircumference" readonly>
+                <label for="armCircumference">Arm Circumference [mm]:</label><input id="armCircumference" readonly>
+            </div>
+            <div class="chartContainer">
+                <canvas id="chartPhase_Mod"></canvas>
+            </div>
+            <div class="params">
+                <label for="m1">M1</label><input id="m1" readonly>
+                <label for="m2">M2</label><input id="m2" readonly>
+                <label for="m3">M3</label><input id="m3" readonly>
+                <label for="m4">M4</label><input id="m4" readonly>
+
+                <label for="d1">D1</label><input id="d1" readonly>
+                <label for="d2">D2</label><input id="d2" readonly>
+                <label for="d3">D3</label><input id="d3" readonly>
+                <label for="d4">D4</label><input id="d4" readonly>
+
+                <label for="k1">K1</label><input id="k1" readonly>
+                <label for="k2">K2</label><input id="k2" readonly>
+                <label for="k3">K3</label><input id="k3" readonly>
+                <label for="k4">K4</label><input id="k4" readonly>
+            </div>
+            <script>
+
+                function writeMeta(meta) {
+                    if (!meta) return;
+
+                    Object.entries(meta).forEach(([key, value]) => {
+                        const el = document.getElementById(key);
+                        if (!el) return;
+
+                        el.value = Number(value).toFixed(3);
+                    });
+                }
+
+                function clampPositive(vec, eps = 1e-9) {
+                    return vec.map(v => Math.max(v, eps));
+                }
+
+                function matlabModel(Fg, Fp, modelMat, resultsMatrix) {
+                    if (!modelMat || !resultsMatrix) return [];
+
+                    const dirKey = document.getElementById("anregung_Mod").value;
+                    const def = MODEL_DEFS[dirKey] ?? MODEL_DEFS.default;
+
+                    const meta = extractSubjectMeta(resultsMatrix);
+                    if (!meta) return [];
+
+                    const X = def.buildX({ Fg, Fp, meta });
+
+                    const result = math.multiply(X, math.transpose(modelMat));
+                    return clampPositive(result);
+                }
+
+                function writeVector(prefix, vec) {
+                    vec.forEach((v, i) => {
+                        document.getElementById(`${prefix}${i + 1}`).value =
+                            Number(v).toFixed(3);
+                    });
+                }
+
+                function updateUI() {
+                    if (!m_beta || !d_beta || !k_beta || !mechImpe_Mod) return;
+
+                    const Fg = sliderGK_Mod.value;
+                    const Fp = sliderAK_Mod.value;
+
+                    writeVector("m", matlabModel(Fg, Fp, m_beta, mechImpe_Mod));
+                    writeVector("k", matlabModel(Fg, Fp, k_beta, mechImpe_Mod));
+                    writeVector("d", matlabModel(Fg, Fp, d_beta, mechImpe_Mod));
+
+                    const meta = extractSubjectMeta(mechImpe);
+                    writeMeta(meta);
+                }
+
+            </script>
+        </div>
+    </div>
+</body>
+</html>
