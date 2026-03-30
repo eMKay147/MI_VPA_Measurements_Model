@@ -663,7 +663,8 @@
                         
                         for (let k = 0; k < resultsMatrix.length; k++) {
                             const row = resultsMatrix[k];
-                            let value = row[dataField]?.[i]?.[dimSelected]?.[dimSelected];
+                            let value = row[dataField]?.[i]?.[1];
+                            console.log(row[dataField]);
                             if (value == null) continue;
 
                             if (shouldTakeAbs(canvasId)) {
