@@ -273,30 +273,53 @@
                             d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/d_beta_Matrix_TX.json",
                             k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/k_beta_Matrix_TX.json"
                         },
-                        buildX: ({ Fg, Fp, meta }) => ([
-                            1,
-                            Fg,
-                            Fp,
-                            Fg * Fp
-                        ])
                     },
-                    default: {
+                    translatorischY: {
+                        betaFiles: {
+                            m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/m_beta_Matrix_TY.json",
+                            d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/d_beta_Matrix_TY.json",
+                            k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/k_beta_Matrix_TY.json"
+                        },
+                    },
+                    translatorischZ: {
                         betaFiles: {
                             m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/m_beta_Matrix_TZ.json",
                             d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/d_beta_Matrix_TZ.json",
                             k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/k_beta_Matrix_TZ.json"
                         },
-                        buildX: ({ Fg, Fp, meta }) => ([
-                            1,
-                            Fg,
-                            Fp,
-                            Fg * Fp,
-                            meta.maxFg,
-                            meta.maxFp,
-                            meta.gender
-                        ])
+                    },
+                    rotatorischX: {
+                        betaFiles: {
+                            m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/m_beta_Matrix_RX.json",
+                            d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/d_beta_Matrix_RX.json",
+                            k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/k_beta_Matrix_RX.json"
+                        },
+                    },
+                    rotatorischY: {
+                        betaFiles: {
+                            m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/m_beta_Matrix_RY.json",
+                            d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/d_beta_Matrix_RY.json",
+                            k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/k_beta_Matrix_RY.json"
+                        },
+                    },
+                    rotatorischZ: {
+                        betaFiles: {
+                            m: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/m_beta_Matrix_RZ.json",
+                            d: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/d_beta_Matrix_RZ.json",
+                            k: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/k_beta_Matrix_RZ.json"
+                        },
                     }
                 };
+
+                function buildX( Fg, Fp){
+
+                    return[
+                        1,
+                        Fg,
+                        Fp,
+                        Fg * Fp
+                    ];
+                }
 
                 async function loadModelMatrices() {
                     const dirKey = document.getElementById("anregung_Mod").value;
@@ -1265,10 +1288,10 @@
                     const dirKey = document.getElementById("anregung_Mod").value;
                     const def = MODEL_DEFS[dirKey] ?? MODEL_DEFS.default;
 
-                    const meta = extractSubjectMeta(resultsMatrix);
-                    if (!meta) return [];
+                    //const meta = extractSubjectMeta(resultsMatrix);
+                    //if (!meta) return [];
 
-                    const X = def.buildX({ Fg, Fp, meta });
+                    const X = buildX({ Fg, Fp});
 
                     const result = math.multiply(X, math.transpose(modelMat));
                     return clampPositive(result);
