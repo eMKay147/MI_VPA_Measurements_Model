@@ -21,7 +21,7 @@
         const dirFiles = {
             translatorischY: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_TY.json",
             translatorischZ: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_TZ.json",
-            translatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@2896921/data/resultsMatrix_TX.json",
+            translatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_TX.json.gz",
             rotatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RX.json",
             rotatorischY: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RY.json",
             rotatorischZ: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RZ.json"
@@ -184,7 +184,15 @@
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status}`);
                     }
-                    
+
+                    // If it's a gz file → decompress
+                    if (url.endsWith(".gz")) {
+                        const buffer = await response.arrayBuffer();
+                        const decompressed = pako.inflate(new Uint8Array(buffer), { to: 'string' });
+                        return JSON.parse(decompressed);
+                    }
+
+                    // normal JSON
                     return response.json();
                 }
 
