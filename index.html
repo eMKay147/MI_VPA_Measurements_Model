@@ -57,6 +57,7 @@
                 </div>
             </div>
         </div>
+        <div class="vl"></div>
         <div class="column middle">
             <div class="chartContainer">
                 <canvas id="chartMI"></canvas>
@@ -129,17 +130,18 @@
                 </div>
             </div>
         </div>
+        <div class="vl"></div>
         <div class="column middle">
             <div class="chartContainer">
                 <canvas id="chartMI_Mod"></canvas>
             </div>
-            <div class="imag-4mkd">
-                <img src="Viermassenschwinger.png" alt="Coordinate system for direction of excitation">
+            <div class="chartContainer">
+                <canvas id="chartPhase_Mod"></canvas>
             </div>
         </div>
         <div class="column right">
-            <div class="chartContainer">
-                <canvas id="chartPhase_Mod"></canvas>
+            <div class="imag-4mkd">
+                <img src="Viermassenschwinger.png" alt="Coordinate system for direction of excitation">
             </div>
             <div class="params">
                 <label for="m1">M1</label><input id="m1" readonly>
@@ -688,6 +690,18 @@
                     return 500;
                 }
 
+                function getMaxY(canvasId, excitation) {
+                    // Only affect MI charts
+                    if (canvasId === "chartMI" || canvasId === "chartMI_Mod") {
+                        if (excitation.startsWith("rotatorisch")) {
+                            return 1;
+                        } else {
+                            return 800;
+                        }
+                    }
+                    return 800; // use default for other charts
+                }
+
                 function buildFrequencyArray(maxFreq) {
                     const cacheKey = `freq_${maxFreq}`;
                     if (frequencyCache[cacheKey]) {
@@ -741,6 +755,10 @@
                             const subjectData = subjectMap[subjectNum];
                             const subjectRangeFp = getUnionRange(subjectData, "TargetPushForce").filter(Number.isFinite);
                             const subjectRangeFg = getUnionRange(subjectData, "TargetGripForce").filter(Number.isFinite);
+                            const minFp = math.min(subjectRangeFp);
+                            const maxFp = math.max(subjectRangeFp);
+                            const minFg = math.min(subjectRangeFg);
+                            const maxFg = math.max(subjectRangeFg);
 
                             if (subjectRangeFp.length === 0 || subjectRangeFg.length === 0) continue;
 
@@ -749,6 +767,8 @@
                             const data_Fg_low_Fp_high = [];
                             const data_Fg_high_Fp_low = [];
                             const data_Fg_high_Fp_high = [];
+                            let Fp_low, Fp_high, Fg_low, Fg_high;
+                            let distanceFp_low, distanceFg_low;
 
                             for (const row of subjectData) {
                                 let value = row[dataField]?.[i];
@@ -764,15 +784,61 @@
                                 // Exact match
                                 if (rowFpNum === initFpNum && rowFgNum === initFgNum) {
                                     valMI.push(value);
-                                } else {
-                                    // Collect data for interpolation
-                                    const Fp_low = subjectRangeFp.filter(v => v <= initFpNum).at(-1);
-                                    const Fp_high = subjectRangeFp.find(v => v > initFpNum);
-                                    const Fg_low = subjectRangeFg.filter(v => v <= initFgNum).at(-1);
-                                    const Fg_high = subjectRangeFg.find(v => v > initFgNum);
+                                }
+                                
+                                if (!subjectRangeFp.includes(initFpNum) || !subjectRangeFg.includes(initFgNum)) {
+                                    if (initFpNum <= minFp) {
+                                        // lower boundary
+                                        Fp_low = minFp;
+                                        Fp_high = subjectRangeFp.find(v => v > minFp);
+                                    } 
+                                    else if (initFpNum >= maxFp) {
+                                        // upper boundary
+                                        Fp_low = subjectRangeFp.filter(v => v < maxFp).at(-1);
+                                        Fp_high = maxFp;
+                                    } 
+                                    else {
+                                        // normal interpolation
+                                        Fp_low = subjectRangeFp.filter(v => v <= initFpNum).at(-1);
+                                        Fp_high = subjectRangeFp.find(v => v > initFpNum);
+                                    }
+                                    if (initFgNum <= minFg) {
+                                        // lower boundary
+                                        Fg_low = minFg;
+                                        Fg_high = subjectRangeFg.find(v => v > minFg);
+                                    } 
+                                    else if (initFgNum >= maxFg) {
+                                        // upper boundary
+                                        Fg_low = subjectRangeFg.filter(v => v < maxFg).at(-1);
+                                        Fg_high = maxFg;
+                                    } 
+                                    else {
+                                        // normal interpolation
+                                        Fg_low = subjectRangeFg.filter(v => v <= initFgNum).at(-1);
+                                        Fg_high = subjectRangeFg.find(v => v > initFgNum);
+                                    }
+
+                                    if ([Fp_low, Fp_high, Fg_low, Fg_high].some(v => v == null)) {
+                                        continue;
+                                    }
+                                    distanceFp_low = (initFpNum-Fp_low) / (Fp_high - Fp_low);
+                                    distanceFg_low = (initFgNum-Fg_low) / (Fg_high - Fg_low);
+                                    
+                                    if (Number(row.TargetPushForce) == Fp_low  && Number(row.TargetGripForce) == Fg_low)
+                                        data_Fg_low_Fp_low.push(value);
+
+                                    if (Number(row.TargetPushForce) == Fp_high && Number(row.TargetGripForce) == Fg_low)
+                                        data_Fg_low_Fp_high.push(value);
+
+                                    if (Number(row.TargetPushForce) == Fp_low  && Number(row.TargetGripForce) == Fg_high)
+                                        data_Fg_high_Fp_low.push(value);
+
+                                    if (Number(row.TargetPushForce) == Fp_high && Number(row.TargetGripForce) == Fg_high)
+                                        data_Fg_high_Fp_high.push(value);
+                                    //console.log({ Fp_low, Fp_high, Fg_low, Fg_high });
 
                                     // Check if we have valid boundaries
-                                    if (Fp_low !== undefined && Fp_high !== undefined && Fg_low !== undefined && Fg_high !== undefined) {
+                                    /*if (Fp_low !== undefined && Fp_high !== undefined && Fg_low !== undefined && Fg_high !== undefined) {
                                         if (rowFpNum === Fp_low && rowFgNum === Fg_low) {
                                             data_Fg_low_Fp_low.push(value);
                                         }
@@ -785,7 +851,7 @@
                                         if (rowFpNum === Fp_high && rowFgNum === Fg_high) {
                                             data_Fg_high_Fp_high.push(value);
                                         }
-                                    }
+                                    }*/
                                 }
                             }
 
@@ -794,14 +860,9 @@
                                 allValues.push(math.mean(valMI));
                             } else if (data_Fg_low_Fp_low.length > 0 && data_Fg_low_Fp_high.length > 0 && 
                                     data_Fg_high_Fp_low.length > 0 && data_Fg_high_Fp_high.length > 0) {
-                                // Interpolate for this subject
-                                const Fp_low = subjectRangeFp.filter(v => v <= initFpNum).at(-1);
-                                const Fp_high = subjectRangeFp.find(v => v > initFpNum);
-                                const Fg_low = subjectRangeFg.filter(v => v <= initFgNum).at(-1);
-                                const Fg_high = subjectRangeFg.find(v => v > initFgNum);
 
-                                const distanceFp_low = (initFpNum - Fp_low) / (Fp_high - Fp_low);
-                                const distanceFg_low = (initFgNum - Fg_low) / (Fg_high - Fg_low);
+                                //const distanceFp_low = (initFpNum - Fp_low) / (Fp_high - Fp_low);
+                                //const distanceFg_low = (initFgNum - Fg_low) / (Fg_high - Fg_low);
 
                                 const data_low_low_med = math.mean(math.abs(data_Fg_low_Fp_low));
                                 const data_low_high_med = math.mean(math.abs(data_Fg_low_Fp_high));
@@ -813,28 +874,7 @@
                                 const Mi_inter = Mi_inter_Fg_Fplow * (1 - distanceFp_low) + Mi_inter_Fg_Fphigh * distanceFp_low;
                                 
                                 allValues.push(Mi_inter);
-                            } else if (subjectRangeFp.includes(initFpNum) && subjectRangeFg.includes(initFgNum)) {
-                                // Fallback: if exact force combination exists in subject's range, use nearest available data
-                                const nearestValues = [];
-                                for (const row of subjectData) {
-                                    let value = row[dataField]?.[i];
-                                    if (value == null) continue;
-                                    if (shouldTakeAbs(canvasId)) {
-                                        value = math.abs(value);
-                                    }
-                                    const rowFpNum = Number(row.TargetPushForce);
-                                    const rowFgNum = Number(row.TargetGripForce);
-                                    
-                                    // Use data at boundary if exact match doesn't exist
-                                    if ((rowFpNum === initFpNum || rowFpNum === subjectRangeFp.filter(v => v <= initFpNum).at(-1) || rowFpNum === subjectRangeFp.find(v => v > initFpNum)) &&
-                                        (rowFgNum === initFgNum || rowFgNum === subjectRangeFg.filter(v => v <= initFgNum).at(-1) || rowFgNum === subjectRangeFg.find(v => v > initFgNum))) {
-                                        nearestValues.push(value);
-                                    }
-                                }
-                                if (nearestValues.length > 0) {
-                                    allValues.push(math.mean(nearestValues));
-                                }
-                            }
+                            } 
                         }
 
                         // Only add to chart if at least one subject has data
@@ -847,6 +887,8 @@
                 }
 
                 function createChart({canvasId,chartRef,resultsMatrix,store,AK,GK,minValue,maxValue,axisTitel,labelPrefix,titel}) {
+
+                    
 
                     if (!resultsMatrix) return chartRef;
 
@@ -861,6 +903,12 @@
                         ? callModelData(resultsMatrix, Number(initFp), Number(initFg), canvasId)
                         : selectMat(resultsMatrix, initFp, initFg, canvasId);
 
+                    const excitation = isMod
+                        ? document.getElementById("anregung_Mod").value
+                        : document.getElementById("anregung").value;
+
+                    const dynamicMaxY = getMaxY(canvasId, excitation);
+
                     store[currentActiveLine] = {
                         x: liveData.x,
                         y: liveData.y,
@@ -869,6 +917,9 @@
                     };
 
                     if (chartRef) {
+                        if (dynamicMaxY !== null) {
+                            chartRef.options.scales.y.max = dynamicMaxY;
+                        }
                         chartRef.data.labels = liveData.x;
 
                         chartRef.data.datasets[0].data = store[0]?.y ?? [];
@@ -971,7 +1022,7 @@
                                 y: {
                                     title: { display: true, text: axisTitel },
                                     min: minValue,
-                                    max: maxValue,
+                                    max: dynamicMaxY !== null ? dynamicMaxY : maxValue,
                                     ticks: {
                                         callback: value => {
                                             const v = Number(value);
