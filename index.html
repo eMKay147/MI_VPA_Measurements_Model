@@ -22,7 +22,7 @@
             translatorischY: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_TY.json",
             translatorischZ: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_TZ.json",
             translatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_TX.json.gz",
-            rotatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RX.json",
+            rotatorischX: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RX.json.gz",
             rotatorischY: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RY.json",
             rotatorischZ: "https://cdn.jsdelivr.net/gh/eMKay147/MI_VPA_Measurements_Model@main/data/resultsMatrix_RZ.json"
         };
@@ -68,7 +68,8 @@
     </script>
 </head>
 <body>
-    <div class="row">
+    <div class="page-container">
+    <div class="row" class="section measured">
         <div class="column left">
             <form action="/action_page.php">
                 <div class="w3-center">                                          
@@ -114,50 +115,6 @@
                     <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
                 </div>
             </div>
-            <br></br>
-            <p>Settings of four-degree-of-freedom mass spring damper system</p>
-            <div class="w3-center">                                          
-                <div class="w3-right-align"><p><label for="dataMAT_Mod">Data Set </label>
-                <select id="dataMAT_Mod"></select></p></div>
-                <div class="w3-right-align"><p><label for="anregung_Mod">Excitation Direction </label>
-                <select id="anregung_Mod">
-                    <option value="translatorischZ">translational z</option>
-                    <option value="translatorischY">translational y</option>
-                    <option value="translatorischX">translational x</option>
-                    <option value="rotatorischZ">rotatory z</option>
-                    <option value="rotatorischY">rotatory y</option>
-                    <option value="rotatorischX">rotatory x</option>
-                </select></p></div>
-            </div>
-            <br></br>
-            <div class="ak-row">
-                <span>Push Force</span>
-                <input id="valAK_Mod" type="text">
-            </div>
-            <input id="andk_Mod" type="range" step="0.01" list="AKmarkers_Mod" />
-            <datalist id="AKmarkers_Mod"></datalist>
-            <div class="ak-row">
-                <span>Grip Force</span>
-                <input id="valGK_Mod" type="text">
-            </div>
-            <input id="greifk_Mod" type="range" step="0.01" list="GKmarkers_Mod" />
-            <datalist id="GKmarkers_Mod"></datalist>
-            <div class="flex-container">
-                <div>
-                    <p>Plot 2</p>
-                    <label class="switch">
-                        <input type="checkbox" id="compareData_Mod">
-                        <span class="slider round"></span>
-                    </label>
-                    <p>Plot 1</p>
-                </div>
-                <div class="images">
-                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
-                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
-                </div>
-            </div>
-        </div>
-        <div class="vl"></div>
         <div class="column middle">
             <div class="chartContainer">
                 <canvas id="chartMI"></canvas>
@@ -518,13 +475,13 @@
                     // Compare toggles
                     document.getElementById("compareData").addEventListener("change", e => {
                         activeLine = e.target.checked ? 1 : 0;
-                        showSecondLegend = true;
+                        showSecondLegend = e.target.checked;
                         updateAllCharts();
                     });
 
                     document.getElementById("compareData_Mod").addEventListener("change", e => {
                         activeLine_Mod = e.target.checked ? 1 : 0;
-                        showSecondLegend_Mod = true;
+                        showSecondLegend_Mod = e.target.checked;
                         updateAllCharts();
                     });
 
@@ -608,11 +565,11 @@
 
                 function getDataField(canvasId) {
                     switch (canvasId) {
-                        case "chartMI":    return "MI";
-                        case "chartPhase": return "Phase";
-                        case "chartVPA":   return "VPA";
-                        case "chartMI_Mod":    return "MI";
-                        case "chartPhase_Mod": return "Phase"
+                        case "chartMI":        return "MI";
+                        case "chartPhase":     return "Phase";
+                        case "chartVPA":       return "VPA";
+                        case "chartMI_Mod":    return "MI_Mod";
+                        case "chartPhase_Mod": return "Phase_Mod";
                         default:
                             throw new Error("Unknown canvasId: " + canvasId);
                     }
@@ -746,7 +703,6 @@
                         ? callModelData(resultsMatrix, initFp, initFg, canvasId)
                         : selectMat(resultsMatrix, initFp, initFg, canvasId);
 
-                    // ✅ use correct active line
                     store[currentActiveLine] = {
                         x: liveData.x,
                         y: liveData.y,
@@ -770,7 +726,6 @@
 
                         chartRef.data.datasets[0].hidden = false;
 
-                        // ✅ use correct legend toggle
                         chartRef.data.datasets[1].hidden = !currentShowSecondLegend;
 
                         chartRef.options.plugins.legend.labels.filter = (legendItem) => {
@@ -871,6 +826,73 @@
                     });
                 }
             </script>
+        </div>
+        <div class="column right">
+            <div class="chartContainer">
+                <canvas id="chartVPA"></canvas>
+            </div>
+            <div class="param-proband">
+                <label for="gender">Sex: Male = 1, Female = 2</label><input id="gender" readonly>
+                <label for="handWeight">Hand Weight [g]:</label><input id="handWeight" readonly>
+                <label for="bodyWeight">Body Weight [kg]:</label><input id="bodyWeight" readonly>
+                <label for="bodyHeight">Body Height [mm]:</label><input id="bodyHeight" readonly>
+                <label for="FrontReach">Front Reach [mm]:</label><input id="FrontReach" readonly>
+                <label for="ElbowToWristLength">Elbow to Wrist Length [mm]:</label><input id="ElbowToWristLength" readonly>
+                <label for="thumbLength">Thumb Length [mm]:</label><input id="thumbLength" readonly>
+                <label for="handLength">Hand Length [mm]:</label><input id="handLength" readonly>
+                <label for="palmLength">Palm Length [mm]:</label><input id="palmLength" readonly>
+                <label for="palmWidth">Palm Width [mm]:</label><input id="palmWidth" readonly>
+                <label for="forearmCircumference">Forearm Circumference [mm]:</label><input id="forearmCircumference" readonly>
+                <label for="armCircumference">Arm Circumference [mm]:</label><input id="armCircumference" readonly>
+            </div>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="row" class="section model">
+        <div class="column left">
+            <p>Settings of four-degree-of-freedom mass spring damper system</p>
+            <div class="w3-center">                                          
+                <div class="w3-right-align"><p><label for="dataMAT_Mod">Data Set </label>
+                <select id="dataMAT_Mod"></select></p></div>
+                <div class="w3-right-align"><p><label for="anregung_Mod">Excitation Direction </label>
+                <select id="anregung_Mod">
+                    <option value="translatorischZ">translational z</option>
+                    <option value="translatorischY">translational y</option>
+                    <option value="translatorischX">translational x</option>
+                    <option value="rotatorischZ">rotatory z</option>
+                    <option value="rotatorischY">rotatory y</option>
+                    <option value="rotatorischX">rotatory x</option>
+                </select></p></div>
+            </div>
+            <br></br>
+            <div class="ak-row">
+                <span>Push Force</span>
+                <input id="valAK_Mod" type="text">
+            </div>
+            <input id="andk_Mod" type="range" step="0.01" list="AKmarkers_Mod" />
+            <datalist id="AKmarkers_Mod"></datalist>
+            <div class="ak-row">
+                <span>Grip Force</span>
+                <input id="valGK_Mod" type="text">
+            </div>
+            <input id="greifk_Mod" type="range" step="0.01" list="GKmarkers_Mod" />
+            <datalist id="GKmarkers_Mod"></datalist>
+            <div class="flex-container">
+                <div>
+                    <p>Plot 2</p>
+                    <label class="switch">
+                        <input type="checkbox" id="compareData_Mod">
+                        <span class="slider round"></span>
+                    </label>
+                    <p>Plot 1</p>
+                </div>
+                <div class="images">
+                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
+                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
+                </div>
+            </div>
+        </div>
+        <div class="column middle">
             <div class="chartContainer">
                 <canvas id="chartMI_Mod"></canvas>
             </div>
@@ -1087,23 +1109,6 @@
         </div>
         <div class="column right">
             <div class="chartContainer">
-                <canvas id="chartVPA"></canvas>
-            </div>
-            <div class="param-proband">
-                <label for="gender">Sex: Male = 1, Female = 2</label><input id="gender" readonly>
-                <label for="handWeight">Hand Weight [g]:</label><input id="handWeight" readonly>
-                <label for="bodyWeight">Body Weight [kg]:</label><input id="bodyWeight" readonly>
-                <label for="bodyHeight">Body Height [mm]:</label><input id="bodyHeight" readonly>
-                <label for="FrontReach">Front Reach [mm]:</label><input id="FrontReach" readonly>
-                <label for="ElbowToWristLength">Elbow to Wrist Length [mm]:</label><input id="ElbowToWristLength" readonly>
-                <label for="thumbLength">Thumb Length [mm]:</label><input id="thumbLength" readonly>
-                <label for="handLength">Hand Length [mm]:</label><input id="handLength" readonly>
-                <label for="palmLength">Palm Length [mm]:</label><input id="palmLength" readonly>
-                <label for="palmWidth">Palm Width [mm]:</label><input id="palmWidth" readonly>
-                <label for="forearmCircumference">Forearm Circumference [mm]:</label><input id="forearmCircumference" readonly>
-                <label for="armCircumference">Arm Circumference [mm]:</label><input id="armCircumference" readonly>
-            </div>
-            <div class="chartContainer">
                 <canvas id="chartPhase_Mod"></canvas>
             </div>
             <div class="params">
@@ -1174,9 +1179,9 @@
                     const meta = extractSubjectMeta(mechImpe);
                     writeMeta(meta);
                 }
-
             </script>
         </div>
+    </div>
     </div>
 </body>
 </html>

@@ -6,6 +6,33 @@ div {
   text-align: center;
 }
 
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.page-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Top + bottom sections */
+.section {
+    flex: 1;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+/* The horizontal divider */
+.divider {
+    height: 3px;
+    background: #444;
+    width: 100%;
+    flex-shrink: 0;
+}
+
 /* Everything for the dropdown menu */
 .control-panel {
   display: flex;
