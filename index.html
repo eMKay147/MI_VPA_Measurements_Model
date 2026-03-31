@@ -88,9 +88,6 @@
     </div>
     <div class="divider"></div>
     <div class="row">
-        <script>
-            
-        </script>
         <div class="column left">
             <p>Settings of four-degree-of-freedom mass spring damper system</p>
             <div class="w3-center">                                          
@@ -212,15 +209,8 @@
         let dimSelected = dimAnr.translatorischZ;
         let dimSelected_Mod = dimAnr.translatorischZ;
 
-        // DOM element caching
-        const sliderAK = document.getElementById("andk");
-        const inputAK = document.getElementById("valAK");
-        const sliderGK = document.getElementById("greifk");
-        const inputGK = document.getElementById("valGK");
-        const sliderAK_Mod = document.getElementById("andk_Mod");
-        const inputAK_Mod = document.getElementById("valAK_Mod");
-        const sliderGK_Mod = document.getElementById("greifk_Mod");
-        const inputGK_Mod = document.getElementById("valGK_Mod");
+        let sliderAK, inputAK, sliderGK, inputGK;
+        let sliderAK_Mod, inputAK_Mod, sliderGK_Mod, inputGK_Mod;
 
         // Cache for frequency arrays
         const frequencyCache = {};
@@ -493,6 +483,15 @@
                 const debouncedChartUpdate = debounce(updateAllCharts, 150);
 
                 document.addEventListener("DOMContentLoaded", () => {
+
+                    const sliderAK = document.getElementById("andk");
+                    const inputAK = document.getElementById("valAK");
+                    const sliderGK = document.getElementById("greifk");
+                    const inputGK = document.getElementById("valGK");
+                    const sliderAK_Mod = document.getElementById("andk_Mod");
+                    const inputAK_Mod = document.getElementById("valAK_Mod");
+                    const sliderGK_Mod = document.getElementById("greifk_Mod");
+                    const inputGK_Mod = document.getElementById("valGK_Mod");
                     initializeApp();
 
                     // Direction changes
