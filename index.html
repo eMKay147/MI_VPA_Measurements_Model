@@ -1285,16 +1285,16 @@
                 function matlabModel(Fg, Fp, modelMat, resultsMatrix) {
                     if (!modelMat || !resultsMatrix) return [];
 
-                    const dirKey = document.getElementById("anregung_Mod").value;
-                    const def = MODEL_DEFS[dirKey] ?? MODEL_DEFS.default;
+                    const X = buildX(Fg, Fp);
 
-                    //const meta = extractSubjectMeta(resultsMatrix);
-                    //if (!meta) return [];
+                    console.log("m_beta shape:", math.size(modelMat));
+                    console.log("X shape:", X.length);
 
-                    const X = buildX({ Fg, Fp});
-
-                    const result = math.multiply(X, math.transpose(modelMat));
-                    return clampPositive(result);
+                    const result = math.multiply(X, modelMat);
+                    
+                    const resultArray = result.toArray ? result.toArray() : result;
+                    
+                    return clampPositive(resultArray);
                 }
 
                 function writeVector(prefix, vec) {
