@@ -425,6 +425,12 @@
                 }
 
                 function setupSlider(slider, input, min, max, ticks, datalistId) {
+
+                    if (!slider || !input) {
+                        console.error("Slider or input missing:", slider, input, datalistId);
+                        return;
+                    }
+
                     slider.min = min;
                     slider.max = max;
                     slider.value = min;
@@ -484,6 +490,8 @@
 
                 document.addEventListener("DOMContentLoaded", () => {
 
+                    initializeApp();
+
                     const sliderAK = document.getElementById("andk");
                     const inputAK = document.getElementById("valAK");
                     const sliderGK = document.getElementById("greifk");
@@ -492,7 +500,10 @@
                     const inputAK_Mod = document.getElementById("valAK_Mod");
                     const sliderGK_Mod = document.getElementById("greifk_Mod");
                     const inputGK_Mod = document.getElementById("valGK_Mod");
-                    initializeApp();
+
+                    console.log("sliderAK:", sliderAK);
+                    console.log("sliderAK_Mod:", sliderAK_Mod);    
+                    
 
                     // Direction changes
                     document.getElementById("anregung").addEventListener("change", async e => {
