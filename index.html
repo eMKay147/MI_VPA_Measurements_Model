@@ -38,7 +38,6 @@
         let newResMat, mechImpe, newResMat_Mod, mechImpe_Mod;
         let activeLine = 0;
         let showSecondLegend = false;
-
         let activeLine_Mod = 0;
         let showSecondLegend_Mod = false;
 
@@ -664,7 +663,7 @@
                         for (let k = 0; k < resultsMatrix.length; k++) {
                             const row = resultsMatrix[k];
                             let value = row[dataField]?.[i];
-                            console.log(row[dataField]);
+                            //console.log(row[dataField]);
                             if (value == null) continue;
 
                             if (shouldTakeAbs(canvasId)) {
@@ -727,14 +726,20 @@
                 function createChart({canvasId,chartRef,resultsMatrix,store,AK,GK,minValue,maxValue,axisTitel,labelPrefix,titel}) {
 
                     if (!resultsMatrix) return chartRef;
+
+                    const isMod = canvasId.includes("_Mod");
+                    const currentActiveLine = isMod ? activeLine_Mod : activeLine;
+                    const currentShowSecondLegend = isMod ? showSecondLegend_Mod : showSecondLegend;
+
                     const initFp = AK;
                     const initFg = GK;
 
-                    const liveData = canvasId.includes("_Mod")
+                    const liveData = isMod
                         ? callModelData(resultsMatrix, initFp, initFg, canvasId)
                         : selectMat(resultsMatrix, initFp, initFg, canvasId);
 
-                    store[activeLine] = {
+                    // ✅ use correct active line
+                    store[currentActiveLine] = {
                         x: liveData.x,
                         y: liveData.y,
                         Fp: initFp,
@@ -756,7 +761,16 @@
                             : `${labelPrefix}`;
 
                         chartRef.data.datasets[0].hidden = false;
-                        chartRef.data.datasets[1].hidden = !showSecondLegend;
+
+                        // ✅ use correct legend toggle
+                        chartRef.data.datasets[1].hidden = !currentShowSecondLegend;
+
+                        chartRef.options.plugins.legend.labels.filter = (legendItem) => {
+                            if (legendItem.datasetIndex === 1 && !currentShowSecondLegend) {
+                                return false;
+                            }
+                            return true;
+                        };
 
                         chartRef.update("none");
                         return chartRef;
@@ -764,10 +778,11 @@
 
                     const ctx = document.getElementById(canvasId);
                     return new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: liveData.x,
-                                datasets: [{
+                        type: 'line',
+                        data: {
+                            labels: liveData.x,
+                            datasets: [
+                                {
                                     label: `${labelPrefix} (Fp: ${initFp}; Fg: ${initFg})`,
                                     data: store[0]?.y ?? [],
                                     showLine: false,
@@ -783,7 +798,7 @@
                                 {
                                     label: `${labelPrefix} (Fp: ${initFp}; Fg: ${initFg})`,
                                     data: store[1]?.y ?? [],
-                                    hidden: true,
+                                    hidden: !currentShowSecondLegend, // ✅ also fix here
                                     showLine: false,
                                     pointRadius: 4,
                                     pointHoverRadius: 6,
@@ -794,27 +809,49 @@
                                     pointBackgroundColor: 'rgba(0,0,0,0)',
                                     pointBorderWidth: 1
                                 }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { position: 'top', align: 'end', labels: { 
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    align: 'end',
+                                    labels: { 
                                         usePointStyle: true,
-                                        pointStyle: 'circle', boxWidth: 4, boxHeight: 5, padding: 12, font: { size: 12 },
-                                        filter: (legendItem, chart) => {
-                                            if (legendItem.datasetIndex === 1 && !showSecondLegend) {
+                                        pointStyle: 'circle',
+                                        boxWidth: 4,
+                                        boxHeight: 5,
+                                        padding: 12,
+                                        font: { size: 12 },
+                                        filter: (legendItem) => {
+                                            if (legendItem.datasetIndex === 1 && !currentShowSecondLegend) {
                                                 return false;
                                             }
                                             return true;
                                         }
-                                    }},
-                                    title: { display: true, text: titel, padding: { top: 20, bottom: 0 }, font: { size: 14 }},
+                                    }
                                 },
-                                scales: {
-                                    x: { title: { display: true, text: 'Frequency in Hz' }, min: 10, max: 500, type: 'logarithmic' },
-                                    y: { title: { display: true, text: axisTitel}, min: minValue, max: maxValue, ticks: {
+                                title: {
+                                    display: true,
+                                    text: titel,
+                                    padding: { top: 20, bottom: 0 },
+                                    font: { size: 14 }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: { display: true, text: 'Frequency in Hz' },
+                                    min: 10,
+                                    max: 500,
+                                    type: 'logarithmic'
+                                },
+                                y: {
+                                    title: { display: true, text: axisTitel },
+                                    min: minValue,
+                                    max: maxValue,
+                                    ticks: {
                                         callback: value => {
                                             const v = Number(value);
                                             return Number.isInteger(v) ? v : v.toFixed(2);
