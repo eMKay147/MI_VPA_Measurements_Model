@@ -319,23 +319,24 @@
                 function extractSubjectMeta(resultsMatrix) {
                     if (!resultsMatrix || resultsMatrix.length === 0) return null;
 
-                    const r = resultsMatrix[0];
+                    const gender = num(resultsMatrix[0].gender, 1);
 
                     return {
-                        gender: num(r.gender, 1),
+                        gender,
                         maxFg: Math.max(...resultsMatrix.map(x => num(x.MaxGripForce)).filter(Number.isFinite)),
                         maxFp: Math.max(...resultsMatrix.map(x => num(x.MaxPushForce)).filter(Number.isFinite)),
-                        handWeight: num(r.handWeight),
-                        bodyWeight: num(r.bodyWeight),
-                        bodyHeight: num(r.bodyHeight),
-                        FrontReach: num(r.FrontReach),
-                        ElbowToWristLength: num(r.ElbowToWristLength),
-                        thumbLength: num(r.thumbLength),
-                        handLength: num(r.handLength),
-                        palmLength: num(r.palmLength),
-                        palmWidth: num(r.palmWidth),
-                        forearmCircumference: num(r.forearmCircumference),
-                        armCircumference: num(r.armCircumference)
+
+                        handWeight: math.mean(resultsMatrix.map(x => num(x.handWeight))),
+                        bodyWeight: math.mean(resultsMatrix.map(x => num(x.bodyWeight))),
+                        bodyHeight: math.mean(resultsMatrix.map(x => num(x.bodyHeight))),
+                        FrontReach: math.mean(resultsMatrix.map(x => num(x.FrontReach))),
+                        ElbowToWristLength: math.mean(resultsMatrix.map(x => num(x.ElbowToWristLength))),
+                        thumbLength: math.mean(resultsMatrix.map(x => num(x.thumbLength))),
+                        handLength: math.mean(resultsMatrix.map(x => num(x.handLength))),
+                        palmLength: math.mean(resultsMatrix.map(x => num(x.palmLength))),
+                        palmWidth: math.mean(resultsMatrix.map(x => num(x.palmWidth))),
+                        forearmCircumference: math.mean(resultsMatrix.map(x => num(x.forearmCircumference))),
+                        armCircumference: math.mean(resultsMatrix.map(x => num(x.armCircumference)))
                     };
                 }
 
@@ -347,10 +348,32 @@
                 }
 
                 function selectProband() {
-                    const chosenProb = Number(document.getElementById("dataMAT").value);
-                    mechImpe = newResMat.filter(r => r.SubjectNumber === chosenProb);
-                    const chosenProb_Mod = Number(document.getElementById("dataMAT_Mod").value);
-                    mechImpe_Mod = newResMat_Mod.filter(r => r.SubjectNumber === chosenProb_Mod);
+                    const chosenProb = document.getElementById("dataMAT").value;
+                    const chosenProb_Mod = document.getElementById("dataMAT_Mod").value;
+
+                    mechImpe = (chosenProb === "ALL")
+                        ? newResMat
+                        : newResMat.filter(r => r.SubjectNumber === Number(chosenProb));
+
+                    mechImpe_Mod = (chosenProb_Mod === "ALL")
+                        ? newResMat_Mod
+                        : newResMat_Mod.filter(r => r.SubjectNumber === Number(chosenProb_Mod));
+
+                    // Compute ranges for selected probands
+                    const ranges = computeForceRangesForProband(mechImpe);
+                    rangeFp = ranges.rangeFp;
+                    rangeFg = ranges.rangeFg;
+
+                    const ranges_Mod = computeForceRangesForProband(mechImpe_Mod);
+                    rangeFp_Mod = ranges_Mod.rangeFp;
+                    rangeFg_Mod = ranges_Mod.rangeFg;
+
+                    if (!rangeFp.length || !rangeFg.length) {
+                        console.error("Force ranges are empty for selected proband");
+                        return;
+                    }
+
+                    setupSliders();
                 }
 
                 function getScalar(v) {
@@ -369,6 +392,11 @@
                             .filter(v => Number.isFinite(v))
                     )].sort((a, b) => a - b);
 
+                    const allOpt = document.createElement("option");
+                    allOpt.value = "ALL";
+                    allOpt.textContent = "All Subjects";
+                    select.appendChild(allOpt);
+
                     subjects.forEach(subject => {
                         const opt = document.createElement("option");
                         opt.value = subject;
@@ -379,32 +407,23 @@
                     select.value = subjects[0];
                 }
 
-                function computeForceRanges() {
-                    rangeFp = [...new Set(
-                        mechImpe
-                            .filter(row => row?.TargetPushForce != null)
-                            .map(row => getScalar(row.TargetPushForce))
+                function getUnionRange(matrix, field) {
+                    return [...new Set(
+                        matrix
+                            .filter(r => r?.[field] != null)
+                            .map(r => getScalar(r[field]))
                     )].sort((a, b) => a - b);
+                }
 
-                    rangeFp_Mod = [...new Set(
-                        mechImpe_Mod
-                            .filter(row => row?.TargetPushForce != null)
-                            .map(row => getScalar(row.TargetPushForce))
-                    )].sort((a, b) => a - b);
+                function computeForceRangesForProband(resultsMatrix, isModChart = false) {
+                    if (!resultsMatrix || resultsMatrix.length === 0) {
+                        return { rangeFp: [], rangeFg: [] };
+                    }
 
-                    rangeFg = [...new Set(
-                        mechImpe
-                            .filter(row => row?.TargetGripForce != null)
-                            .map(row => getScalar(row.TargetGripForce))
-                    )].sort((a, b) => a - b);
+                    const rangeFp = getUnionRange(resultsMatrix, "TargetPushForce").filter(Number.isFinite);
+                    const rangeFg = getUnionRange(resultsMatrix, "TargetGripForce").filter(Number.isFinite);
 
-                    rangeFg_Mod = [...new Set(
-                        mechImpe_Mod
-                            .filter(row => row?.TargetGripForce != null)
-                            .map(row => getScalar(row.TargetGripForce))
-                    )].sort((a, b) => a - b);
-
-                    setupSliders();
+                    return { rangeFp, rangeFg };
                 }
 
                 function setupSliders() {
@@ -478,14 +497,23 @@
 
                     const clamp = v => Math.min(max, Math.max(min, v));
 
-                    slider.oninput = () => input.value = slider.value;
+                    slider.oninput = () => {
+                        input.value = slider.value;
+                        updateUI();
+                        debouncedChartUpdate();
+                    };
 
-                    input.onblur = () => {
+                    input.onchange = () => {
                         let v = Number(input.value);
                         if (Number.isNaN(v)) return;
-                        v = clamp(v);
+
+                        v = Math.min(max, Math.max(min, v));
+
                         slider.value = v;
                         input.value = v;
+
+                        updateUI();
+                        debouncedChartUpdate();
                     };
                 }
 
@@ -493,34 +521,13 @@
                     await loadDirection();
                     populateProbandDropdown(newResMat, "dataMAT");
                     populateProbandDropdown(newResMat_Mod, "dataMAT_Mod");
-                    selectProband();
-                    computeForceRanges();
+                    selectProband();  // This now calls setupSliders() internally
                     await loadModelMatrices();
                     updateUI();
                     updateAllCharts();
                 }
 
                 function initEventListeners() {
-
-                    DOM.sliderAK.oninput = () => {
-                        updateUI();
-                        debouncedChartUpdate();
-                    };
-
-                    DOM.sliderGK.oninput = () => {
-                        updateUI();
-                        debouncedChartUpdate();
-                    };
-
-                    DOM.sliderAK_Mod.oninput = () => {
-                        updateUI();
-                        debouncedChartUpdate();
-                    };
-
-                    DOM.sliderGK_Mod.oninput = () => {
-                        updateUI();
-                        debouncedChartUpdate();
-                    };
 
                     DOM.compare.onchange = e => {
                         activeLine = e.target.checked ? 1 : 0;
@@ -531,6 +538,43 @@
                     DOM.compareMod.onchange = e => {
                         activeLine_Mod = e.target.checked ? 1 : 0;
                         showSecondLegend_Mod = e.target.checked;
+                        updateAllCharts();
+                    };
+
+                    DOM.selectData.onchange = async () => {
+                        selectProband();
+                        updateUI();
+                        updateAllCharts();
+                    };
+
+                    DOM.selectDataMod.onchange = async () => {
+                        selectProband();
+                        updateUI();
+                        updateAllCharts();
+                    };
+
+                    DOM.selectDir.onchange = async () => {
+                        isLoading = true;
+
+                        await loadDirection();
+                        populateProbandDropdown(newResMat, "dataMAT");
+                        selectProband();  // Recalculates ranges for new direction
+
+                        isLoading = false;
+                        updateAllCharts();
+                    };
+
+                    DOM.selectDirMod.onchange = async () => {
+                        isLoading = true;
+
+                        await loadDirection();
+                        await loadModelMatrices();
+
+                        populateProbandDropdown(newResMat_Mod, "dataMAT_Mod");
+                        selectProband();  // Recalculates ranges for new direction
+
+                        isLoading = false;
+                        updateUI();
                         updateAllCharts();
                     };
                 }
@@ -659,7 +703,7 @@
                 }
 
                 function selectMat(resultsMatrix, initFp, initFg, canvasId) {
-                    if (!rangeFp || !rangeFg) { 
+                    if (!resultsMatrix || resultsMatrix.length === 0) { 
                         return { x: [], y: [] };
                     }
 
@@ -668,75 +712,134 @@
                     const y = [];
 
                     const excitation = document.getElementById("anregung").value;
+                    
+                    if (!rangeFp || !rangeFg || rangeFp.length === 0 || rangeFg.length === 0) { 
+                        return { x: [], y: [] };
+                    }
+
                     const maxFreq = getMaxFreq(excitation);
                     const freq = buildFrequencyArray(maxFreq);
 
+                    const initFpNum = Number(initFp);
+                    const initFgNum = Number(initFg);
+
+                    // Group data by subject
+                    const subjectMap = {};
+                    for (const row of resultsMatrix) {
+                        const subjectNum = row.SubjectNumber;
+                        if (!subjectMap[subjectNum]) {
+                            subjectMap[subjectNum] = [];
+                        }
+                        subjectMap[subjectNum].push(row);
+                    }
+
                     for (let i = 0; i < freq.length; i++) {
-                        const valMI = [];
-                        const data_Fg_low_Fp_low = [];
-                        const data_Fg_low_Fp_high = [];
-                        const data_Fg_high_Fp_low = [];
-                        const data_Fg_high_Fp_high = [];
-                        let Fp_low, Fp_high, Fg_low, Fg_high;
-                        let distanceFp_low, distanceFg_low;
-                        
-                        for (let k = 0; k < resultsMatrix.length; k++) {
-                            const row = resultsMatrix[k];
-                            let value = row[dataField]?.[i];
-                            //console.log(row[dataField]);
-                            if (value == null) continue;
+                        const allValues = [];
 
-                            if (shouldTakeAbs(canvasId)) {
-                                value = math.abs(value);
-                            }
+                        // Process each subject separately
+                        for (const subjectNum in subjectMap) {
+                            const subjectData = subjectMap[subjectNum];
+                            const subjectRangeFp = getUnionRange(subjectData, "TargetPushForce").filter(Number.isFinite);
+                            const subjectRangeFg = getUnionRange(subjectData, "TargetGripForce").filter(Number.isFinite);
 
-                            if (
-                                row.TargetPushForce == initFp &&
-                                row.TargetGripForce == initFg
-                            ) {
-                                valMI.push(value);
-                            } 
-                            
-                            if (!rangeFp.includes(Number(initFp)) || !rangeFg.includes(Number(initFg))) {
-                                Fp_low  = rangeFp.filter(v => v <= initFp).at(-1);
-                                Fp_high = rangeFp.find(v => v > initFp);
+                            if (subjectRangeFp.length === 0 || subjectRangeFg.length === 0) continue;
 
-                                Fg_low  = rangeFg.filter(v => v <= initFg).at(-1);
-                                Fg_high = rangeFg.find(v => v > initFg);
+                            const valMI = [];
+                            const data_Fg_low_Fp_low = [];
+                            const data_Fg_low_Fp_high = [];
+                            const data_Fg_high_Fp_low = [];
+                            const data_Fg_high_Fp_high = [];
 
-                                if ([Fp_low, Fp_high, Fg_low, Fg_high].some(v => v == null)) {
-                                    continue;
+                            for (const row of subjectData) {
+                                let value = row[dataField]?.[i];
+                                if (value == null) continue;
+
+                                if (shouldTakeAbs(canvasId)) {
+                                    value = math.abs(value);
                                 }
-                                distanceFp_low = (initFp-Fp_low) / (Fp_high - Fp_low);
-                                distanceFg_low = (initFg-Fg_low) / (Fg_high - Fg_low);
+
+                                const rowFpNum = Number(row.TargetPushForce);
+                                const rowFgNum = Number(row.TargetGripForce);
+
+                                // Exact match
+                                if (rowFpNum === initFpNum && rowFgNum === initFgNum) {
+                                    valMI.push(value);
+                                } else {
+                                    // Collect data for interpolation
+                                    const Fp_low = subjectRangeFp.filter(v => v <= initFpNum).at(-1);
+                                    const Fp_high = subjectRangeFp.find(v => v > initFpNum);
+                                    const Fg_low = subjectRangeFg.filter(v => v <= initFgNum).at(-1);
+                                    const Fg_high = subjectRangeFg.find(v => v > initFgNum);
+
+                                    // Check if we have valid boundaries
+                                    if (Fp_low !== undefined && Fp_high !== undefined && Fg_low !== undefined && Fg_high !== undefined) {
+                                        if (rowFpNum === Fp_low && rowFgNum === Fg_low) {
+                                            data_Fg_low_Fp_low.push(value);
+                                        }
+                                        if (rowFpNum === Fp_high && rowFgNum === Fg_low) {
+                                            data_Fg_low_Fp_high.push(value);
+                                        }
+                                        if (rowFpNum === Fp_low && rowFgNum === Fg_high) {
+                                            data_Fg_high_Fp_low.push(value);
+                                        }
+                                        if (rowFpNum === Fp_high && rowFgNum === Fg_high) {
+                                            data_Fg_high_Fp_high.push(value);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Use exact match if available
+                            if (valMI.length > 0) {
+                                allValues.push(math.mean(valMI));
+                            } else if (data_Fg_low_Fp_low.length > 0 && data_Fg_low_Fp_high.length > 0 && 
+                                    data_Fg_high_Fp_low.length > 0 && data_Fg_high_Fp_high.length > 0) {
+                                // Interpolate for this subject
+                                const Fp_low = subjectRangeFp.filter(v => v <= initFpNum).at(-1);
+                                const Fp_high = subjectRangeFp.find(v => v > initFpNum);
+                                const Fg_low = subjectRangeFg.filter(v => v <= initFgNum).at(-1);
+                                const Fg_high = subjectRangeFg.find(v => v > initFgNum);
+
+                                const distanceFp_low = (initFpNum - Fp_low) / (Fp_high - Fp_low);
+                                const distanceFg_low = (initFgNum - Fg_low) / (Fg_high - Fg_low);
+
+                                const data_low_low_med = math.mean(math.abs(data_Fg_low_Fp_low));
+                                const data_low_high_med = math.mean(math.abs(data_Fg_low_Fp_high));
+                                const data_high_low_med = math.mean(math.abs(data_Fg_high_Fp_low));
+                                const data_high_high_med = math.mean(math.abs(data_Fg_high_Fp_high));
+
+                                const Mi_inter_Fg_Fphigh = data_low_high_med * (1 - distanceFg_low) + data_high_high_med * distanceFg_low;
+                                const Mi_inter_Fg_Fplow = data_low_low_med * (1 - distanceFg_low) + data_high_low_med * distanceFg_low;
+                                const Mi_inter = Mi_inter_Fg_Fplow * (1 - distanceFp_low) + Mi_inter_Fg_Fphigh * distanceFp_low;
                                 
-                                if (row.TargetPushForce == Fp_low  && row.TargetGripForce == Fg_low)
-                                    data_Fg_low_Fp_low.push(value);
-
-                                if (row.TargetPushForce == Fp_high && row.TargetGripForce == Fg_low)
-                                    data_Fg_low_Fp_high.push(value);
-
-                                if (row.TargetPushForce == Fp_low  && row.TargetGripForce == Fg_high)
-                                    data_Fg_high_Fp_low.push(value);
-
-                                if (row.TargetPushForce == Fp_high && row.TargetGripForce == Fg_high)
-                                    data_Fg_high_Fp_high.push(value);
+                                allValues.push(Mi_inter);
+                            } else if (subjectRangeFp.includes(initFpNum) && subjectRangeFg.includes(initFgNum)) {
+                                // Fallback: if exact force combination exists in subject's range, use nearest available data
+                                const nearestValues = [];
+                                for (const row of subjectData) {
+                                    let value = row[dataField]?.[i];
+                                    if (value == null) continue;
+                                    if (shouldTakeAbs(canvasId)) {
+                                        value = math.abs(value);
+                                    }
+                                    const rowFpNum = Number(row.TargetPushForce);
+                                    const rowFgNum = Number(row.TargetGripForce);
+                                    
+                                    // Use data at boundary if exact match doesn't exist
+                                    if ((rowFpNum === initFpNum || rowFpNum === subjectRangeFp.filter(v => v <= initFpNum).at(-1) || rowFpNum === subjectRangeFp.find(v => v > initFpNum)) &&
+                                        (rowFgNum === initFgNum || rowFgNum === subjectRangeFg.filter(v => v <= initFgNum).at(-1) || rowFgNum === subjectRangeFg.find(v => v > initFgNum))) {
+                                        nearestValues.push(value);
+                                    }
+                                }
+                                if (nearestValues.length > 0) {
+                                    allValues.push(math.mean(nearestValues));
+                                }
                             }
                         }
-                        if (valMI.length > 0) {
-                                y.push(math.mean(valMI));
-                                x.push(freq[i]);
-                        }
-                        if (data_Fg_low_Fp_low.length > 0 && data_Fg_low_Fp_high.length > 0 && data_Fg_high_Fp_low.length > 0 && data_Fg_high_Fp_high.length > 0) {
-                            const data_low_low_med = math.mean(math.abs(data_Fg_low_Fp_low));
-                            const data_low_high_med = math.mean(math.abs(data_Fg_low_Fp_high));
-                            const data_high_low_med = math.mean(math.abs(data_Fg_high_Fp_low));
-                            const data_high_high_med = math.mean(math.abs(data_Fg_high_Fp_high));
 
-                            const Mi_inter_Fg_Fphigh = data_low_high_med*(1-distanceFg_low) + data_high_high_med*distanceFg_low;
-                            const Mi_inter_Fg_Fplow = data_low_low_med*(1-distanceFg_low) + data_high_low_med*distanceFg_low;
-                            const Mi_inter = Mi_inter_Fg_Fplow*(1-distanceFp_low) + Mi_inter_Fg_Fphigh*distanceFp_low;
-                            y.push(Mi_inter);
+                        // Only add to chart if at least one subject has data
+                        if (allValues.length > 0) {
+                            y.push(math.mean(allValues));
                             x.push(freq[i]);
                         }
                     }
