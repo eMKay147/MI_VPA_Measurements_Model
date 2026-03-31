@@ -616,6 +616,12 @@
                 function updateAllCharts() {
                     if (isLoading) return;
 
+                    const excitation = document.getElementById("anregung").value;
+                    const dynamicMaxMI = excitation.startsWith("rotatorisch") ? "1" : "800";
+
+                    const excitation_Mod = document.getElementById("anregung_Mod").value;
+                    const dynamicMaxMI_Mod = excitation_Mod.startsWith("rotatorisch") ? "1" : "800";
+
                     charts.chart1 = createChart({
                         canvasId: "chartMI",
                         chartRef: charts.chart1,
@@ -624,7 +630,7 @@
                         AK: DOM.sliderAK.value,
                         GK: DOM.sliderGK.value,
                         minValue: "0",
-                        maxValue: "800",
+                        maxValue: dynamicMaxMI,
                         axisTitel: "|Z\u2095| in Ns/m",
                         labelPrefix: "Z\u2095",
                         titel: "Mechanical Impedance"
@@ -666,7 +672,7 @@
                         AK: DOM.sliderAK_Mod.value,
                         GK: DOM.sliderGK_Mod.value,
                         minValue: "0",
-                        maxValue: "800",
+                        maxValue: dynamicMaxMI_Mod,
                         axisTitel: "|Z\u2095| in Ns/m",
                         labelPrefix: "Z\u2095",
                         titel: "Mechanical Impedance"
@@ -717,12 +723,12 @@
                     // Only affect MI charts
                     if (canvasId === "chartMI" || canvasId === "chartMI_Mod") {
                         if (excitation.startsWith("rotatorisch")) {
-                            return 1;
+                            return "1";
                         } else {
-                            return 800;
+                            return "800";
                         }
                     }
-                    return 800; // use default for other charts
+                    return null; // Return null for non-MI charts
                 }
 
                 function buildFrequencyArray(maxFreq) {
@@ -910,9 +916,6 @@
                 }
 
                 function createChart({canvasId,chartRef,resultsMatrix,store,AK,GK,minValue,maxValue,axisTitel,labelPrefix,titel}) {
-
-                    
-
                     if (!resultsMatrix) return chartRef;
 
                     const isMod = canvasId.includes("_Mod");
@@ -931,6 +934,7 @@
                         : document.getElementById("anregung").value;
 
                     const dynamicMaxY = getMaxY(canvasId, excitation);
+                    const finalMaxValue = dynamicMaxY !== null ? dynamicMaxY : maxValue;
 
                     store[currentActiveLine] = {
                         x: liveData.x,
@@ -940,9 +944,7 @@
                     };
 
                     if (chartRef) {
-                        if (dynamicMaxY !== null) {
-                            chartRef.options.scales.y.max = dynamicMaxY;
-                        }
+                        chartRef.options.scales.y.max = finalMaxValue;
                         chartRef.data.labels = liveData.x;
 
                         chartRef.data.datasets[0].data = store[0]?.y ?? [];
@@ -993,7 +995,7 @@
                                 {
                                     label: `${labelPrefix} (Fp: ${initFp}; Fg: ${initFg})`,
                                     data: store[1]?.y ?? [],
-                                    hidden: !currentShowSecondLegend, // ✅ also fix here
+                                    hidden: !currentShowSecondLegend,
                                     showLine: false,
                                     pointRadius: 4,
                                     pointHoverRadius: 6,
@@ -1045,7 +1047,7 @@
                                 y: {
                                     title: { display: true, text: axisTitel },
                                     min: minValue,
-                                    max: dynamicMaxY !== null ? dynamicMaxY : maxValue,
+                                    max: finalMaxValue,
                                     ticks: {
                                         callback: value => {
                                             const v = Number(value);
@@ -1286,12 +1288,7 @@
                     if (!modelMat || !resultsMatrix) return [];
 
                     const X = buildX(Fg, Fp);
-
-                    console.log("m_beta shape:", math.size(modelMat));
-                    console.log("X shape:", X.length);
-
                     const result = math.multiply(X, math.transpose(modelMat));
-                    
                     const resultArray = Array.isArray(result) ? result : [result];
                     
                     return clampPositive(resultArray);
