@@ -9,6 +9,161 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pako@2/dist/pako.min.js"></script>
+</head>
+<body>
+    <div class="page-container">
+    <div class="row">
+        <div class="column left">
+            <form action="/action_page.php">
+                <div class="w3-center">                                          
+                    <div class="w3-right-align"><p><label for="dataMAT">Data Set </label>
+                    <select id="dataMAT"></select></p></div>
+                    <div class="w3-right-align"><p><label for="anregung">Excitation Direction </label>
+                    <select id="anregung">
+                        <option value="translatorischZ">translational z</option>
+                        <option value="translatorischY">translational y</option>
+                        <option value="translatorischX">translational x</option>
+                        <option value="rotatorischZ">rotatory z</option>
+                        <option value="rotatorischY">rotatory y</option>
+                        <option value="rotatorischX">rotatory x</option>
+                    </select></p></div>
+                </div>
+            </form>
+            <div>
+                <img src="HAS_ISO10068_transparent.png" alt="Coordinate system for direction of excitation" style="width:70%">
+            </div>
+            <div class="ak-row">
+                <span>Push Force</span>
+                <input id="valAK" type="text">
+            </div>
+            <input id="andk" type="range" step="0.01" list="AKmarkers" />
+            <datalist id="AKmarkers"></datalist>
+            <div class="ak-row">
+                <span>Grip Force</span>
+                <input id="valGK" type="text">
+            </div>
+            <input id="greifk" type="range" step="0.01" list="GKmarkers" />
+            <datalist id="GKmarkers"></datalist>
+            <div class="flex-container">
+                <div>
+                    <p>Plot 2</p>
+                    <label class="switch">
+                        <input type="checkbox" id="compareData">
+                        <span class="slider round"></span>
+                    </label>
+                    <p>Plot 1</p>
+                </div>
+                <div class="images">
+                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
+                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
+                </div>
+            </div>
+        <div class="column middle">
+            <div class="chartContainer">
+                <canvas id="chartMI"></canvas>
+            </div>
+            <div class="chartContainer">
+                <canvas id="chartPhase"></canvas>
+            </div>
+        </div>
+        <div class="column right">
+            <div class="chartContainer">
+                <canvas id="chartVPA"></canvas>
+            </div>
+            <div class="param-proband">
+                <label for="gender">Sex: Male = 1, Female = 2</label><input id="gender" readonly>
+                <label for="handWeight">Hand Weight [g]:</label><input id="handWeight" readonly>
+                <label for="bodyWeight">Body Weight [kg]:</label><input id="bodyWeight" readonly>
+                <label for="bodyHeight">Body Height [mm]:</label><input id="bodyHeight" readonly>
+                <label for="FrontReach">Front Reach [mm]:</label><input id="FrontReach" readonly>
+                <label for="ElbowToWristLength">Elbow to Wrist Length [mm]:</label><input id="ElbowToWristLength" readonly>
+                <label for="thumbLength">Thumb Length [mm]:</label><input id="thumbLength" readonly>
+                <label for="handLength">Hand Length [mm]:</label><input id="handLength" readonly>
+                <label for="palmLength">Palm Length [mm]:</label><input id="palmLength" readonly>
+                <label for="palmWidth">Palm Width [mm]:</label><input id="palmWidth" readonly>
+                <label for="forearmCircumference">Forearm Circumference [mm]:</label><input id="forearmCircumference" readonly>
+                <label for="armCircumference">Arm Circumference [mm]:</label><input id="armCircumference" readonly>
+            </div>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="row">
+        <script>
+            
+        </script>
+        <div class="column left">
+            <p>Settings of four-degree-of-freedom mass spring damper system</p>
+            <div class="w3-center">                                          
+                <div class="w3-right-align"><p><label for="dataMAT_Mod">Data Set </label>
+                <select id="dataMAT_Mod"></select></p></div>
+                <div class="w3-right-align"><p><label for="anregung_Mod">Excitation Direction </label>
+                <select id="anregung_Mod">
+                    <option value="translatorischZ">translational z</option>
+                    <option value="translatorischY">translational y</option>
+                    <option value="translatorischX">translational x</option>
+                    <option value="rotatorischZ">rotatory z</option>
+                    <option value="rotatorischY">rotatory y</option>
+                    <option value="rotatorischX">rotatory x</option>
+                </select></p></div>
+            </div>
+            <br></br>
+            <div class="ak-row">
+                <span>Push Force</span>
+                <input id="valAK_Mod" type="text">
+            </div>
+            <input id="andk_Mod" type="range" step="0.01" list="AKmarkers_Mod" />
+            <datalist id="AKmarkers_Mod"></datalist>
+            <div class="ak-row">
+                <span>Grip Force</span>
+                <input id="valGK_Mod" type="text">
+            </div>
+            <input id="greifk_Mod" type="range" step="0.01" list="GKmarkers_Mod" />
+            <datalist id="GKmarkers_Mod"></datalist>
+            <div class="flex-container">
+                <div>
+                    <p>Plot 2</p>
+                    <label class="switch">
+                        <input type="checkbox" id="compareData_Mod">
+                        <span class="slider round"></span>
+                    </label>
+                    <p>Plot 1</p>
+                </div>
+                <div class="images">
+                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
+                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
+                </div>
+            </div>
+        </div>
+        <div class="column middle">
+            <div class="chartContainer">
+                <canvas id="chartMI_Mod"></canvas>
+            </div>
+            <div class="imag-4mkd">
+                <img src="Viermassenschwinger.png" alt="Coordinate system for direction of excitation">
+            </div>
+        </div>
+        <div class="column right">
+            <div class="chartContainer">
+                <canvas id="chartPhase_Mod"></canvas>
+            </div>
+            <div class="params">
+                <label for="m1">M1</label><input id="m1" readonly>
+                <label for="m2">M2</label><input id="m2" readonly>
+                <label for="m3">M3</label><input id="m3" readonly>
+                <label for="m4">M4</label><input id="m4" readonly>
+
+                <label for="d1">D1</label><input id="d1" readonly>
+                <label for="d2">D2</label><input id="d2" readonly>
+                <label for="d3">D3</label><input id="d3" readonly>
+                <label for="d4">D4</label><input id="d4" readonly>
+
+                <label for="k1">K1</label><input id="k1" readonly>
+                <label for="k2">K2</label><input id="k2" readonly>
+                <label for="k3">K3</label><input id="k3" readonly>
+                <label for="k4">K4</label><input id="k4" readonly>
+            </div>
+        </div>
+    </div>
     <script>
         const charts = {
             chart1: null,
@@ -1024,161 +1179,6 @@
                     writeMeta(meta);
                 }
     </script>
-</head>
-<body>
-    <div class="page-container">
-    <div class="row">
-        <div class="column left">
-            <form action="/action_page.php">
-                <div class="w3-center">                                          
-                    <div class="w3-right-align"><p><label for="dataMAT">Data Set </label>
-                    <select id="dataMAT"></select></p></div>
-                    <div class="w3-right-align"><p><label for="anregung">Excitation Direction </label>
-                    <select id="anregung">
-                        <option value="translatorischZ">translational z</option>
-                        <option value="translatorischY">translational y</option>
-                        <option value="translatorischX">translational x</option>
-                        <option value="rotatorischZ">rotatory z</option>
-                        <option value="rotatorischY">rotatory y</option>
-                        <option value="rotatorischX">rotatory x</option>
-                    </select></p></div>
-                </div>
-            </form>
-            <div>
-                <img src="HAS_ISO10068_transparent.png" alt="Coordinate system for direction of excitation" style="width:70%">
-            </div>
-            <div class="ak-row">
-                <span>Push Force</span>
-                <input id="valAK" type="text">
-            </div>
-            <input id="andk" type="range" step="0.01" list="AKmarkers" />
-            <datalist id="AKmarkers"></datalist>
-            <div class="ak-row">
-                <span>Grip Force</span>
-                <input id="valGK" type="text">
-            </div>
-            <input id="greifk" type="range" step="0.01" list="GKmarkers" />
-            <datalist id="GKmarkers"></datalist>
-            <div class="flex-container">
-                <div>
-                    <p>Plot 2</p>
-                    <label class="switch">
-                        <input type="checkbox" id="compareData">
-                        <span class="slider round"></span>
-                    </label>
-                    <p>Plot 1</p>
-                </div>
-                <div class="images">
-                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
-                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
-                </div>
-            </div>
-        <div class="column middle">
-            <div class="chartContainer">
-                <canvas id="chartMI"></canvas>
-            </div>
-            <div class="chartContainer">
-                <canvas id="chartPhase"></canvas>
-            </div>
-        </div>
-        <div class="column right">
-            <div class="chartContainer">
-                <canvas id="chartVPA"></canvas>
-            </div>
-            <div class="param-proband">
-                <label for="gender">Sex: Male = 1, Female = 2</label><input id="gender" readonly>
-                <label for="handWeight">Hand Weight [g]:</label><input id="handWeight" readonly>
-                <label for="bodyWeight">Body Weight [kg]:</label><input id="bodyWeight" readonly>
-                <label for="bodyHeight">Body Height [mm]:</label><input id="bodyHeight" readonly>
-                <label for="FrontReach">Front Reach [mm]:</label><input id="FrontReach" readonly>
-                <label for="ElbowToWristLength">Elbow to Wrist Length [mm]:</label><input id="ElbowToWristLength" readonly>
-                <label for="thumbLength">Thumb Length [mm]:</label><input id="thumbLength" readonly>
-                <label for="handLength">Hand Length [mm]:</label><input id="handLength" readonly>
-                <label for="palmLength">Palm Length [mm]:</label><input id="palmLength" readonly>
-                <label for="palmWidth">Palm Width [mm]:</label><input id="palmWidth" readonly>
-                <label for="forearmCircumference">Forearm Circumference [mm]:</label><input id="forearmCircumference" readonly>
-                <label for="armCircumference">Arm Circumference [mm]:</label><input id="armCircumference" readonly>
-            </div>
-        </div>
-    </div>
-    <div class="divider"></div>
-    <div class="row">
-        <script>
-            
-        </script>
-        <div class="column left">
-            <p>Settings of four-degree-of-freedom mass spring damper system</p>
-            <div class="w3-center">                                          
-                <div class="w3-right-align"><p><label for="dataMAT_Mod">Data Set </label>
-                <select id="dataMAT_Mod"></select></p></div>
-                <div class="w3-right-align"><p><label for="anregung_Mod">Excitation Direction </label>
-                <select id="anregung_Mod">
-                    <option value="translatorischZ">translational z</option>
-                    <option value="translatorischY">translational y</option>
-                    <option value="translatorischX">translational x</option>
-                    <option value="rotatorischZ">rotatory z</option>
-                    <option value="rotatorischY">rotatory y</option>
-                    <option value="rotatorischX">rotatory x</option>
-                </select></p></div>
-            </div>
-            <br></br>
-            <div class="ak-row">
-                <span>Push Force</span>
-                <input id="valAK_Mod" type="text">
-            </div>
-            <input id="andk_Mod" type="range" step="0.01" list="AKmarkers_Mod" />
-            <datalist id="AKmarkers_Mod"></datalist>
-            <div class="ak-row">
-                <span>Grip Force</span>
-                <input id="valGK_Mod" type="text">
-            </div>
-            <input id="greifk_Mod" type="range" step="0.01" list="GKmarkers_Mod" />
-            <datalist id="GKmarkers_Mod"></datalist>
-            <div class="flex-container">
-                <div>
-                    <p>Plot 2</p>
-                    <label class="switch">
-                        <input type="checkbox" id="compareData_Mod">
-                        <span class="slider round"></span>
-                    </label>
-                    <p>Plot 1</p>
-                </div>
-                <div class="images">
-                    <img src="Farbverlauf_grün.png" alt="red line" style="width:90%">
-                    <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
-                </div>
-            </div>
-        </div>
-        <div class="column middle">
-            <div class="chartContainer">
-                <canvas id="chartMI_Mod"></canvas>
-            </div>
-            <div class="imag-4mkd">
-                <img src="Viermassenschwinger.png" alt="Coordinate system for direction of excitation">
-            </div>
-        </div>
-        <div class="column right">
-            <div class="chartContainer">
-                <canvas id="chartPhase_Mod"></canvas>
-            </div>
-            <div class="params">
-                <label for="m1">M1</label><input id="m1" readonly>
-                <label for="m2">M2</label><input id="m2" readonly>
-                <label for="m3">M3</label><input id="m3" readonly>
-                <label for="m4">M4</label><input id="m4" readonly>
-
-                <label for="d1">D1</label><input id="d1" readonly>
-                <label for="d2">D2</label><input id="d2" readonly>
-                <label for="d3">D3</label><input id="d3" readonly>
-                <label for="d4">D4</label><input id="d4" readonly>
-
-                <label for="k1">K1</label><input id="k1" readonly>
-                <label for="k2">K2</label><input id="k2" readonly>
-                <label for="k3">K3</label><input id="k3" readonly>
-                <label for="k4">K4</label><input id="k4" readonly>
-            </div>
-        </div>
-    </div>
     </div>
 </body>
 </html>
