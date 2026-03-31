@@ -14,21 +14,19 @@
     <div class="page-container">
     <div class="row">
         <div class="column left">
-            <form action="/action_page.php">
-                <div class="w3-center">                                          
-                    <div class="w3-right-align"><p><label for="dataMAT">Data Set </label>
-                    <select id="dataMAT"></select></p></div>
-                    <div class="w3-right-align"><p><label for="anregung">Excitation Direction </label>
-                    <select id="anregung">
-                        <option value="translatorischZ">translational z</option>
-                        <option value="translatorischY">translational y</option>
-                        <option value="translatorischX">translational x</option>
-                        <option value="rotatorischZ">rotatory z</option>
-                        <option value="rotatorischY">rotatory y</option>
-                        <option value="rotatorischX">rotatory x</option>
-                    </select></p></div>
-                </div>
-            </form>
+            <div class="w3-center">                                          
+                <div class="w3-right-align"><p><label for="dataMAT">Data Set </label>
+                <select id="dataMAT"></select></p></div>
+                <div class="w3-right-align"><p><label for="anregung">Excitation Direction </label>
+                <select id="anregung">
+                    <option value="translatorischZ">translational z</option>
+                    <option value="translatorischY">translational y</option>
+                    <option value="translatorischX">translational x</option>
+                    <option value="rotatorischZ">rotatory z</option>
+                    <option value="rotatorischY">rotatory y</option>
+                    <option value="rotatorischX">rotatory x</option>
+                </select></p></div>
+            </div>
             <div>
                 <img src="HAS_ISO10068_transparent.png" alt="Coordinate system for direction of excitation" style="width:70%">
             </div>
@@ -58,6 +56,7 @@
                     <img src="Farbverlauf_blau.png" alt="blue line" style="width:90%">
                 </div>
             </div>
+        </div>
         <div class="column middle">
             <div class="chartContainer">
                 <canvas id="chartMI"></canvas>
@@ -161,6 +160,7 @@
         </div>
     </div>
     <script>
+        const DOM = {};
         const charts = {
             chart1: null,
             chart2: null,
@@ -208,8 +208,32 @@
         let dimSelected = dimAnr.translatorischZ;
         let dimSelected_Mod = dimAnr.translatorischZ;
 
-        let sliderAK, inputAK, sliderGK, inputGK;
-        let sliderAK_Mod, inputAK_Mod, sliderGK_Mod, inputGK_Mod;
+        function initDOM() {
+            DOM.sliderAK = document.getElementById("andk");
+            DOM.inputAK = document.getElementById("valAK");
+            DOM.sliderGK = document.getElementById("greifk");
+            DOM.inputGK = document.getElementById("valGK");
+
+            DOM.sliderAK_Mod = document.getElementById("andk_Mod");
+            DOM.inputAK_Mod = document.getElementById("valAK_Mod");
+            DOM.sliderGK_Mod = document.getElementById("greifk_Mod");
+            DOM.inputGK_Mod = document.getElementById("valGK_Mod");
+
+            DOM.selectData = document.getElementById("dataMAT");
+            DOM.selectDataMod = document.getElementById("dataMAT_Mod");
+
+            DOM.selectDir = document.getElementById("anregung");
+            DOM.selectDirMod = document.getElementById("anregung_Mod");
+
+            DOM.compare = document.getElementById("compareData");
+            DOM.compareMod = document.getElementById("compareData_Mod");
+
+            Object.entries(DOM).forEach(([key, el]) => {
+                if (!el) {
+                    console.error("Missing DOM element:", key);
+                }
+            });
+        }
 
         // Cache for frequency arrays
         const frequencyCache = {};
@@ -386,47 +410,52 @@
                 function setupSliders() {
                     const numTicks = 6;
 
-                    // Setup Push Force sliders
                     const minValFp = Math.min(...rangeFp);
                     const maxValFp = Math.max(...rangeFp);
+
+                    const minValFp_Mod = Math.min(...rangeFp_Mod);
+                    const maxValFp_Mod = Math.max(...rangeFp_Mod);
+
                     const stepFp = (maxValFp - minValFp) / (numTicks - 1);
+                    const stepFp_Mod = (maxValFp_Mod - minValFp_Mod) / (numTicks - 1);
+
                     const ticksFp = Array.from({ length: numTicks }, (_, i) =>
                         Math.round(minValFp + i * stepFp)
                     );
 
-                    const minValFp_Mod = Math.min(...rangeFp_Mod);
-                    const maxValFp_Mod = Math.max(...rangeFp_Mod);
-                    const stepFp_Mod = (maxValFp_Mod - minValFp_Mod) / (numTicks - 1);
                     const ticksFp_Mod = Array.from({ length: numTicks }, (_, i) =>
                         Math.round(minValFp_Mod + i * stepFp_Mod)
                     );
 
-                    setupSlider(sliderAK, inputAK, minValFp, maxValFp, ticksFp, "AKmarkers");
-                    setupSlider(sliderAK_Mod, inputAK_Mod, minValFp_Mod, maxValFp_Mod, ticksFp_Mod, "AKmarkers_Mod");
+                    setupSlider(DOM.sliderAK, DOM.inputAK, minValFp, maxValFp, ticksFp, "AKmarkers");
+                    setupSlider(DOM.sliderAK_Mod, DOM.inputAK_Mod, minValFp_Mod, maxValFp_Mod, ticksFp_Mod, "AKmarkers_Mod");
 
-                    // Setup Grip Force sliders
+                    // Grip
                     const minValFg = Math.min(...rangeFg);
                     const maxValFg = Math.max(...rangeFg);
+
+                    const minValFg_Mod = Math.min(...rangeFg_Mod);
+                    const maxValFg_Mod = Math.max(...rangeFg_Mod);
+
                     const stepFg = (maxValFg - minValFg) / (numTicks - 1);
+                    const stepFg_Mod = (maxValFg_Mod - minValFg_Mod) / (numTicks - 1);
+
                     const ticksFg = Array.from({ length: numTicks }, (_, i) =>
                         Math.round(minValFg + i * stepFg)
                     );
 
-                    const minValFg_Mod = Math.min(...rangeFg_Mod);
-                    const maxValFg_Mod = Math.max(...rangeFg_Mod);
-                    const stepFg_Mod = (maxValFg_Mod - minValFg_Mod) / (numTicks - 1);
                     const ticksFg_Mod = Array.from({ length: numTicks }, (_, i) =>
                         Math.round(minValFg_Mod + i * stepFg_Mod)
                     );
 
-                    setupSlider(sliderGK, inputGK, minValFg, maxValFg, ticksFg, "GKmarkers");
-                    setupSlider(sliderGK_Mod, inputGK_Mod, minValFg_Mod, maxValFg_Mod, ticksFg_Mod, "GKmarkers_Mod");
+                    setupSlider(DOM.sliderGK, DOM.inputGK, minValFg, maxValFg, ticksFg, "GKmarkers");
+                    setupSlider(DOM.sliderGK_Mod, DOM.inputGK_Mod, minValFg_Mod, maxValFg_Mod, ticksFg_Mod, "GKmarkers_Mod");
                 }
 
                 function setupSlider(slider, input, min, max, ticks, datalistId) {
 
                     if (!slider || !input) {
-                        console.error("Slider or input missing:", slider, input, datalistId);
+                        console.error("Slider/input missing:", datalistId);
                         return;
                     }
 
@@ -436,7 +465,10 @@
                     input.value = min;
 
                     const datalist = document.getElementById(datalistId);
+                    if (!datalist) return;
+
                     datalist.innerHTML = "";
+
                     ticks.forEach(v => {
                         const opt = document.createElement("option");
                         opt.value = v;
@@ -444,33 +476,17 @@
                         datalist.appendChild(opt);
                     });
 
-                    const minVal = Number(slider.min);
-                    const maxVal = Number(slider.max);
+                    const clamp = v => Math.min(max, Math.max(min, v));
 
-                    const clamp = (v) => Math.min(maxVal, Math.max(minVal, v));
+                    slider.oninput = () => input.value = slider.value;
 
-                    slider.addEventListener("input", () => {
-                        input.value = slider.value;
-                    });
-
-                    input.addEventListener("keydown", e => {
-                        if (e.key !== "Enter") return;
+                    input.onblur = () => {
                         let v = Number(input.value);
                         if (Number.isNaN(v)) return;
                         v = clamp(v);
                         slider.value = v;
                         input.value = v;
-                        slider.dispatchEvent(new Event("input"));
-                    });
-
-                    input.addEventListener("blur", () => {
-                        let v = Number(input.value);
-                        if (Number.isNaN(v)) return;
-                        v = clamp(v);
-                        slider.value = v;
-                        input.value = v;
-                        slider.dispatchEvent(new Event("input"));
-                    });
+                    };
                 }
 
                 async function initializeApp() {
@@ -484,116 +500,48 @@
                     updateAllCharts();
                 }
 
-                // Debounced chart update
-                const debouncedChartUpdate = debounce(updateAllCharts, 150);
+                function initEventListeners() {
 
-                document.addEventListener("DOMContentLoaded", () => {
-
-                    initializeApp();
-
-                    const sliderAK = document.getElementById("andk");
-                    const inputAK = document.getElementById("valAK");
-                    const sliderGK = document.getElementById("greifk");
-                    const inputGK = document.getElementById("valGK");
-                    const sliderAK_Mod = document.getElementById("andk_Mod");
-                    const inputAK_Mod = document.getElementById("valAK_Mod");
-                    const sliderGK_Mod = document.getElementById("greifk_Mod");
-                    const inputGK_Mod = document.getElementById("valGK_Mod");
-
-                    console.log("sliderAK:", sliderAK);
-                    console.log("sliderAK_Mod:", sliderAK_Mod);    
-                    
-
-                    // Direction changes
-                    document.getElementById("anregung").addEventListener("change", async e => {
-                        isLoading = true;
-                        await loadDirection();
-                        populateProbandDropdown(newResMat, "dataMAT");
-                        selectProband();
-                        computeForceRanges();
-                        await loadModelMatrices();
-                        updateUI();
-                        isLoading = false;
-                        updateAllCharts();
-                    });
-
-                    document.getElementById("anregung_Mod").addEventListener("change", async e => {
-                        isLoading = true;
-                        await loadDirection();
-                        populateProbandDropdown(newResMat_Mod, "dataMAT_Mod");
-                        selectProband();
-                        computeForceRanges();
-                        await loadModelMatrices();
-                        updateUI();
-                        isLoading = false;
-                        updateAllCharts();
-                    });
-
-                    // Proband selection
-                    document.getElementById("dataMAT").addEventListener("change", async function () {
-                        if (!newResMat) return;
-                        isLoading = true;
-                        selectProband();
-                        computeForceRanges();
-                        updateUI();
-                        isLoading = false;
-                        updateAllCharts();
-                    });
-
-                    document.getElementById("dataMAT_Mod").addEventListener("change", async function () {
-                        if (!newResMat_Mod) return;
-                        isLoading = true;
-                        selectProband();
-                        computeForceRanges();
-                        updateUI();
-                        isLoading = false;
-                        updateAllCharts();
-                    });
-
-                    // Slider inputs with debouncing
-                    sliderAK.addEventListener("input", () => {
+                    DOM.sliderAK.oninput = () => {
                         updateUI();
                         debouncedChartUpdate();
-                    });
-                    sliderGK.addEventListener("input", () => {
+                    };
+
+                    DOM.sliderGK.oninput = () => {
                         updateUI();
                         debouncedChartUpdate();
-                    });
-                    sliderAK_Mod.addEventListener("input", () => {
+                    };
+
+                    DOM.sliderAK_Mod.oninput = () => {
                         updateUI();
                         debouncedChartUpdate();
-                    });
-                    sliderGK_Mod.addEventListener("input", () => {
+                    };
+
+                    DOM.sliderGK_Mod.oninput = () => {
                         updateUI();
                         debouncedChartUpdate();
-                    });
+                    };
 
-                    // Dimension selection
-                    document.getElementById("anregung").addEventListener("change", function () {
-                        dimSelected = dimAnr[this.value];
-                        updateAllCharts();
-                    });
-
-                    document.getElementById("anregung_Mod").addEventListener("change", function () {
-                        dimSelected_Mod = dimAnr[this.value];
-                        updateAllCharts();
-                    });
-
-                    // Compare toggles
-                    document.getElementById("compareData").addEventListener("change", e => {
+                    DOM.compare.onchange = e => {
                         activeLine = e.target.checked ? 1 : 0;
                         showSecondLegend = e.target.checked;
                         updateAllCharts();
-                    });
+                    };
 
-                    document.getElementById("compareData_Mod").addEventListener("change", e => {
+                    DOM.compareMod.onchange = e => {
                         activeLine_Mod = e.target.checked ? 1 : 0;
                         showSecondLegend_Mod = e.target.checked;
                         updateAllCharts();
-                    });
+                    };
+                }
 
-                    document.getElementById("dataMAT").dispatchEvent(new Event("change"));
-                    document.getElementById("dataMAT_Mod").dispatchEvent(new Event("change"));
+                // Debounced chart update
+                const debouncedChartUpdate = debounce(updateAllCharts, 150);
+
+                document.addEventListener("DOMContentLoaded", async () => {
+                    initDOM();
+                    await initializeApp();
+                    initEventListeners();
                 });
                 
                 function updateAllCharts() {
@@ -604,8 +552,8 @@
                         chartRef: charts.chart1,
                         resultsMatrix: mechImpe,
                         store: storedData.MI,
-                        AK: sliderAK.value,
-                        GK: sliderGK.value,
+                        AK: DOM.sliderAK.value,
+                        GK: DOM.sliderGK.value,
                         minValue: "0",
                         maxValue: "800",
                         axisTitel: "|Z\u2095| in Ns/m",
@@ -618,8 +566,8 @@
                         chartRef: charts.chart2,
                         resultsMatrix: mechImpe,
                         store: storedData.Phase,
-                        AK: sliderAK.value,
-                        GK: sliderGK.value,
+                        AK: DOM.sliderAK.value,
+                        GK: DOM.sliderGK.value,
                         minValue: "-1.0",
                         maxValue: "3.2",
                         axisTitel: "\u2220Z\u2095 in rad",
@@ -632,8 +580,8 @@
                         chartRef: charts.chart3,
                         resultsMatrix: mechImpe,
                         store: storedData.VPA,
-                        AK: sliderAK.value,
-                        GK: sliderGK.value,
+                        AK: DOM.sliderAK.value,
+                        GK: DOM.sliderGK.value,
                         minValue: "0.0",
                         maxValue: "0.5",
                         axisTitel: "VPA in W",
@@ -646,8 +594,8 @@
                         chartRef: charts.chart4,
                         resultsMatrix: mechImpe_Mod,
                         store: storedData.MI_Mod,
-                        AK: sliderAK_Mod.value,
-                        GK: sliderGK_Mod.value,
+                        AK: DOM.sliderAK_Mod.value,
+                        GK: DOM.sliderGK_Mod.value,
                         minValue: "0",
                         maxValue: "800",
                         axisTitel: "|Z\u2095| in Ns/m",
@@ -660,8 +608,8 @@
                         chartRef: charts.chart5,
                         resultsMatrix: mechImpe_Mod,
                         store: storedData.Phase_Mod,
-                        AK: sliderAK_Mod.value,
-                        GK: sliderGK_Mod.value,
+                        AK: DOM.sliderAK_Mod.value,
+                        GK: DOM.sliderGK_Mod.value,
                         minValue: "-1.0",
                         maxValue: "3.2",
                         axisTitel: "\u2220Z\u2095 in rad",
@@ -807,7 +755,7 @@
                     const initFg = GK;
 
                     const liveData = isMod
-                        ? callModelData(resultsMatrix, initFp, initFg, canvasId)
+                        ? callModelData(resultsMatrix, Number(initFp), Number(initFg), canvasId)
                         : selectMat(resultsMatrix, initFp, initFg, canvasId);
 
                     store[currentActiveLine] = {
@@ -952,6 +900,11 @@
                     const d_model = matlabModel(Fg, Fp, d_beta, resultsMatrix);
                     const k_model = matlabModel(Fg, Fp, k_beta, resultsMatrix);
 
+                    if (!m_model.length || !d_model.length || !k_model.length) {
+                        console.warn("Model returned empty vectors");
+                        return { x: [], y: [] };
+                    }
+
                     const {Zmod} = impedance_mkd(
                         m_model,
                         d_model,
@@ -962,10 +915,10 @@
                     const phase_mod = Zmod.map(z => Math.atan2(z.im, z.re));
 
                     for (let f = 0; f < freq.length; f++) {
-                        if(dataField === "MI"){
+                        if(dataField === "MI" || dataField === "MI_Mod"){
                             y.push(Zmod[f].re);
                         }
-                        if(dataField === "Phase"){
+                        if(dataField === "Phase" || dataField === "Phase_Mod"){
                             y.push(phase_mod[f]);
                         }
                         x.push(freq[f]);
@@ -1177,8 +1130,10 @@
                 function updateUI() {
                     if (!m_beta || !d_beta || !k_beta || !mechImpe_Mod) return;
 
-                    const Fg = sliderGK_Mod.value;
-                    const Fp = sliderAK_Mod.value;
+                    const Fg = Number(DOM.sliderGK_Mod?.value);
+                    const Fp = Number(DOM.sliderAK_Mod?.value);
+
+                    if (Fg == null || Fp == null) return;
 
                     writeVector("m", matlabModel(Fg, Fp, m_beta, mechImpe_Mod));
                     writeVector("k", matlabModel(Fg, Fp, k_beta, mechImpe_Mod));
